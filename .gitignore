@@ -1,0 +1,34 @@
+# Compiled classes
+target/
+*.class
+
+# IntelliJ
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Env / secrets
+.env
+.env.local
+*.pem
+*.key
+
+# Docker
+docker-compose.override.yml
+
+# Frontend (added later)
+node_modules/
+dist/
+build/
