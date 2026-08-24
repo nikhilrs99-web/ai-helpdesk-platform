@@ -31,3 +31,4 @@ See [docs/decisions](docs/decisions) for the reasoning behind key choices, inclu
 |---|---|
 | Day 1 | Project scaffold: parent Maven POM, .gitignore, README |
 | Day 2 | Repository restructured into services/, infrastructure/, docs/; first three ADRs added |
+| Day 3 | Five empty Spring Boot modules (ticket, kb, ai, notification, analytics) with health endpoints, wired into the parent POM |

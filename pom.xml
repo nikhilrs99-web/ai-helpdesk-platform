@@ -32,7 +32,24 @@
         </dependencies>
     </dependencyManagement>
 
-    <!-- Service modules are added incrementally, one per build day.
-         ticket-service and kb-service are added next. -->
+    <modules>
+        <module>services/ticket-service</module>
+        <module>services/kb-service</module>
+        <module>services/ai-service</module>
+        <module>services/notification-service</module>
+        <module>services/analytics-service</module>
+    </modules>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-maven-plugin</artifactId>
+                    <version>${spring-boot.version}</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
 
 </project>
