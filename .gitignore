@@ -32,3 +32,6 @@ docker-compose.override.yml
 node_modules/
 dist/
 build/
+
+# Personal build log (local reference only, never pushed)
+Build Log/
