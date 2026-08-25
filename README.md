@@ -18,6 +18,12 @@ docs/
   decisions/       Architecture Decision Records (ADRs) — the "why" behind each major choice
 ```
 
+## Running locally
+```
+cp .env.example .env      # fill in local values (never commit .env)
+docker compose up -d      # starts PostgreSQL with pgvector enabled
+```
+
 ## Architecture
 Diagram added once the core services are online.
 
@@ -32,3 +38,4 @@ See [docs/decisions](docs/decisions) for the reasoning behind key choices, inclu
 | Day 1 | Project scaffold: parent Maven POM, .gitignore, README |
 | Day 2 | Repository restructured into services/, infrastructure/, docs/; first three ADRs added |
 | Day 3 | Five empty Spring Boot modules (ticket, kb, ai, notification, analytics) with health endpoints, wired into the parent POM |
+| Day 4 | docker-compose.yml with PostgreSQL (pgvector 0.8.6), init script enabling the extension, .env.example added |
