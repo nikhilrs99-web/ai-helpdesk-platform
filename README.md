@@ -7,6 +7,7 @@ In active development — built incrementally, one day at a time. See the Build 
 
 ## Repository layout
 ```
+common/            shared DTOs, enums, and versioned Kafka event records used by every service
 services/         one folder per microservice (ticket, kb, ai, notification, analytics)
 infrastructure/    docker, kubernetes, helm, terraform
 docs/
@@ -32,6 +33,9 @@ Java 21 &middot; Spring Boot 3 &middot; Spring Security &middot; Spring Data JPA
 
 See [docs/decisions](docs/decisions) for the reasoning behind key choices, including why PostgreSQL replaces a separate MongoDB store.
 
+## Design Patterns
+See [docs/architecture/design-patterns.md](docs/architecture/design-patterns.md) for where each design pattern (State, Strategy, Factory, Observer, Circuit Breaker) is used and why it was chosen over the obvious alternative. Tracked as each one actually ships, not planned ahead of the code.
+
 ## Build Log
 | Day | What shipped |
 |---|---|
@@ -39,3 +43,4 @@ See [docs/decisions](docs/decisions) for the reasoning behind key choices, inclu
 | Day 2 | Repository restructured into services/, infrastructure/, docs/; first three ADRs added |
 | Day 3 | Five empty Spring Boot modules (ticket, kb, ai, notification, analytics) with health endpoints, wired into the parent POM |
 | Day 4 | docker-compose.yml with PostgreSQL (pgvector 0.8.6), init script enabling the extension, .env.example added |
+| Day 5 | common module added: shared enums, a DomainEvent contract, three versioned Kafka event records, and a shared ApiError DTO, wired into every service; design-patterns tracker started |

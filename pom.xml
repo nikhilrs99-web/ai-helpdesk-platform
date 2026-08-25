@@ -29,10 +29,16 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+            <dependency>
+                <groupId>com.helpdesk</groupId>
+                <artifactId>common</artifactId>
+                <version>${project.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
     <modules>
+        <module>common</module>
         <module>services/ticket-service</module>
         <module>services/kb-service</module>
         <module>services/ai-service</module>
