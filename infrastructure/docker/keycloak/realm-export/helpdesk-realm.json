@@ -1,0 +1,53 @@
+{
+  "realm": "helpdesk",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "roles": {
+    "realm": [
+      { "name": "customer", "description": "End users who raise support tickets" },
+      { "name": "agent", "description": "Support agents who work tickets" },
+      { "name": "admin", "description": "Platform administrators" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "helpdesk-frontend",
+      "enabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": ["http://localhost:5173/*", "http://localhost:3000/*"],
+      "webOrigins": ["*"]
+    }
+  ],
+  "users": [
+    {
+      "username": "test-customer",
+      "enabled": true,
+      "firstName": "Test",
+      "lastName": "Customer",
+      "email": "test-customer@example.local",
+      "emailVerified": true,
+      "requiredActions": [],
+      "credentials": [
+        { "type": "password", "value": "customer-local-dev-123", "temporary": false }
+      ],
+      "realmRoles": ["customer"]
+    },
+    {
+      "username": "test-agent",
+      "enabled": true,
+      "firstName": "Test",
+      "lastName": "Agent",
+      "email": "test-agent@example.local",
+      "emailVerified": true,
+      "requiredActions": [],
+      "credentials": [
+        { "type": "password", "value": "agent-local-dev-123", "temporary": false }
+      ],
+      "realmRoles": ["agent"]
+    }
+  ]
+}

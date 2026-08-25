@@ -22,8 +22,9 @@ docs/
 ## Running locally
 ```
 cp .env.example .env      # fill in local values (never commit .env)
-docker compose up -d      # starts PostgreSQL with pgvector enabled
+docker compose up -d      # starts PostgreSQL (pgvector) and Keycloak
 ```
+See [docs/architecture/keycloak-setup.md](docs/architecture/keycloak-setup.md) for the realm/roles/test-user setup and how to get a local test token.
 
 ## Architecture
 Diagram added once the core services are online.
@@ -44,3 +45,4 @@ See [docs/architecture/design-patterns.md](docs/architecture/design-patterns.md)
 | Day 3 | Five empty Spring Boot modules (ticket, kb, ai, notification, analytics) with health endpoints, wired into the parent POM |
 | Day 4 | docker-compose.yml with PostgreSQL (pgvector 0.8.6), init script enabling the extension, .env.example added |
 | Day 5 | common module added: shared enums, a DomainEvent contract, three versioned Kafka event records, and a shared ApiError DTO, wired into every service; design-patterns tracker started |
+| Day 6 | Keycloak added via docker-compose with a realm-as-code import (realm, client, roles, test users); Postgres host port fixed to 5433 to resolve a conflict with an unrelated local container; verified real token issuance end to end |
