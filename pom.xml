@@ -51,6 +51,18 @@
         <pluginManagement>
             <plugins>
                 <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <configuration>
+                        <!-- spring-boot-starter-parent sets this by default; our reactor doesn't inherit
+                             from it (ADR-0001-style choice: our own root POM is the parent), so it has
+                             to be set explicitly. Without it, Spring MVC can't match an unannotated
+                             @PathVariable UUID id to a {id} URL template - parameter names are erased
+                             from bytecode by default. -->
+                        <parameters>true</parameters>
+                    </configuration>
+                </plugin>
+                <plugin>
                     <groupId>org.springframework.boot</groupId>
                     <artifactId>spring-boot-maven-plugin</artifactId>
                     <version>${spring-boot.version}</version>
