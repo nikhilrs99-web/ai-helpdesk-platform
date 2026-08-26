@@ -2,6 +2,7 @@ package com.helpdesk.ticket.domain;
 
 import com.helpdesk.common.enums.TicketCategory;
 import com.helpdesk.common.enums.TicketStatus;
+import com.helpdesk.ticket.domain.state.TicketState;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -63,8 +64,18 @@ public class Ticket extends BaseEntity {
         return status;
     }
 
-    public void setStatus(TicketStatus status) {
-        this.status = status;
+    /**
+     * The only way to change a ticket's status. There is no plain setStatus - going
+     * through the State pattern here means an illegal transition (e.g. OPEN straight to
+     * RESOLVED) is rejected structurally, not by every caller remembering to check.
+     *
+     * @throws com.helpdesk.ticket.domain.state.IllegalTicketTransitionException if the
+     *         transition is not legal from the ticket's current status
+     */
+    public void changeStatus(TicketStatus target) {
+        TicketState current = TicketState.forStatus(this.status);
+        TicketState next = current.transitionTo(target);
+        this.status = next.status();
     }
 
     public String getRequesterId() {

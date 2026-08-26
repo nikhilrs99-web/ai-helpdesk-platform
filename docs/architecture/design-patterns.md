@@ -9,14 +9,22 @@ implemented, not planned.
 ---
 
 ## State — Ticket lifecycle
-**Status**: Planned (Week 2)
-**Where**: `ticket-service`, `Ticket` status transitions (`OPEN` → `AI_TRIAGED` → `ASSIGNED` → `IN_PROGRESS` →
-`WAITING_FOR_CUSTOMER` → `RESOLVED` → `CLOSED`)
+**Status**: Implemented (Day 9)
+**Where**: `ticket-service`, `Ticket` status transitions
 **Why this over the obvious alternative**: A plain enum plus scattered `if/else` checks across the codebase makes
 it easy to allow an illegal transition (e.g. `CLOSED` → `IN_PROGRESS`) from any call site that forgets to check.
 The State pattern encodes "what transitions are legal from here" inside the state itself, so an illegal
 transition becomes a structural impossibility rather than a bug someone has to remember to guard against.
-**Code**: _link added once implemented_
+**Implementation notes**: `TicketState` is a Java enum with a per-constant abstract method
+(`legalNextStatuses()`), one constant per `TicketStatus` value — an idiomatic way to implement State in Java
+without a separate class per state. `Ticket.changeStatus(TicketStatus)` is the *only* way to change a ticket's
+status (the plain `setStatus` was removed); it delegates to `TicketState.transitionTo(...)`, which throws
+`IllegalTicketTransitionException` for anything not legal. The actual graph is not purely linear — early closure
+(`CLOSED`) is legal from any non-terminal state, `WAITING_FOR_CUSTOMER` can return to `IN_PROGRESS`, and
+`RESOLVED` can be reopened back to `IN_PROGRESS` — a closer match to how support tickets really move than a
+strict pipeline.
+**Code**: [`domain/state/TicketState.java`](../../services/ticket-service/src/main/java/com/helpdesk/ticket/domain/state/TicketState.java),
+[`domain/Ticket.java`](../../services/ticket-service/src/main/java/com/helpdesk/ticket/domain/Ticket.java)
 
 ## Strategy — Ticket routing rules
 **Status**: Planned (Week 3)
