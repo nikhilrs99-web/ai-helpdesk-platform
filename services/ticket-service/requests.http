@@ -1,0 +1,84 @@
+### Ticket API - manual requests
+### Requires: docker compose up -d (Postgres + Keycloak), and ticket-service running on :8081
+### Note: IntelliJ's HTTP Client "run" button is an Ultimate-only feature - in Community
+### edition this file is documentation you copy from, not a click-to-run file. See
+### scripts/test-ticket-api.ps1 at the repo root for a script you can actually execute.
+
+### 1. Get a token for the test customer
+POST http://localhost:8080/realms/helpdesk/protocol/openid-connect/token
+Content-Type: application/x-www-form-urlencoded
+
+client_id=helpdesk-frontend&grant_type=password&username=test-customer&password=customer-local-dev-123
+
+> {%
+    client.global.set("token", response.body.access_token);
+%}
+
+### 2. Create a ticket
+POST http://localhost:8081/api/tickets
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "subject": "Can't log in",
+  "description": "Password reset email never arrives",
+  "category": "ACCESS"
+}
+
+> {%
+    client.global.set("ticketId", response.body.id);
+%}
+
+### 3. Get the ticket by id
+GET http://localhost:8081/api/tickets/{{ticketId}}
+Authorization: Bearer {{token}}
+
+### 4. List tickets (paginated)
+GET http://localhost:8081/api/tickets?page=0&size=10
+Authorization: Bearer {{token}}
+
+### 5. Update subject/description
+PUT http://localhost:8081/api/tickets/{{ticketId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "subject": "Can't log in - still broken",
+  "description": "Tried again, still no email"
+}
+
+### 6. Legal status change: OPEN -> AI_TRIAGED
+PATCH http://localhost:8081/api/tickets/{{ticketId}}/status
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "status": "AI_TRIAGED"
+}
+
+### 7. Illegal status change: AI_TRIAGED -> RESOLVED (expect 409)
+PATCH http://localhost:8081/api/tickets/{{ticketId}}/status
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "status": "RESOLVED"
+}
+
+### 8. No token (expect 401)
+GET http://localhost:8081/api/tickets
+
+### 9. Invalid body - blank subject (expect 400)
+POST http://localhost:8081/api/tickets
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "subject": "",
+  "description": "x",
+  "category": "ACCESS"
+}
+
+### 10. Unknown id (expect 404)
+GET http://localhost:8081/api/tickets/00000000-0000-0000-0000-000000000000
+Authorization: Bearer {{token}}
