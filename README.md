@@ -46,3 +46,4 @@ See [docs/architecture/design-patterns.md](docs/architecture/design-patterns.md)
 | Day 4 | docker-compose.yml with PostgreSQL (pgvector 0.8.6), init script enabling the extension, .env.example added |
 | Day 5 | common module added: shared enums, a DomainEvent contract, three versioned Kafka event records, and a shared ApiError DTO, wired into every service; design-patterns tracker started |
 | Day 6 | Keycloak added via docker-compose with a realm-as-code import (realm, client, roles, test users); Postgres host port fixed to 5433 to resolve a conflict with an unrelated local container; verified real token issuance end to end |
+| Day 7 | ticket-service configured as an OAuth2 resource server validating Keycloak JWTs, with a custom converter reading Keycloak's realm_access.roles claim; verified end to end: no token -> 401, valid token -> 200 with the correct role |

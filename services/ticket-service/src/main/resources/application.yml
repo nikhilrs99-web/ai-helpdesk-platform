@@ -4,6 +4,11 @@ server:
 spring:
   application:
     name: ticket-service
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8080/realms/helpdesk
 
 management:
   endpoints:

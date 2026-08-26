@@ -26,7 +26,21 @@ curl -X POST http://localhost:8080/realms/helpdesk/protocol/openid-connect/token
 ```
 Returns a JSON body with an `access_token` — a JWT whose payload includes
 `"realm_access": {"roles": ["customer"]}`, which is what `ticket-service`'s OAuth2 resource server
-config (Day 7) will validate and read roles from.
+config (Day 7) validates and reads roles from.
+
+## Resource server integration (ticket-service, Day 7)
+- `spring.security.oauth2.resourceserver.jwt.issuer-uri` points at the realm; Spring Boot auto-discovers
+  the JWK Set from the OIDC discovery endpoint, so no key material is configured by hand.
+- Keycloak puts roles in a nested `realm_access.roles` claim, which Spring Security's default JWT
+  converter does not read (it expects a flat `scope`/`scp` claim). A custom
+  `KeycloakRealmRoleConverter` maps `realm_access.roles` to `ROLE_*` authorities instead.
+- Controller methods must use `@AuthenticationPrincipal Jwt jwt`, not a bare `Jwt jwt` parameter —
+  without the annotation, Spring MVC tries to construct a `Jwt` from the request body/params instead of
+  pulling it from the security context, and fails with `IllegalArgumentException: tokenValue cannot be
+  empty`.
+- `principal.getName()` on a JWT-authenticated request returns the token's `sub` claim (a UUID), not
+  `preferred_username`. For anything user-facing, read `jwt.getClaimAsString("preferred_username")`
+  explicitly instead.
 
 ## Admin console
 `http://localhost:8080` &rarr; Administration Console, using the credentials in `.env`
