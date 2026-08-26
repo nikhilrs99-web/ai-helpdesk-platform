@@ -30,3 +30,10 @@ management:
   endpoint:
     health:
       show-details: always
+
+logging:
+  level:
+    # show-sql only prints the SQL text with ? placeholders - this shows the actual
+    # values bound to each ? and the values Hibernate reads back out of the ResultSet.
+    org.hibernate.orm.jdbc.bind: TRACE
+    org.hibernate.orm.jdbc.extract: TRACE
