@@ -1,0 +1,206 @@
+{
+  "info": {
+    "name": "AI Helpdesk - Ticket API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "0. Get Token (test-customer)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+        ],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            { "key": "client_id", "value": "helpdesk-frontend" },
+            { "key": "grant_type", "value": "password" },
+            { "key": "username", "value": "test-customer" },
+            { "key": "password", "value": "customer-local-dev-123" }
+          ]
+        },
+        "url": { "raw": "{{keycloakUrl}}/realms/helpdesk/protocol/openid-connect/token" }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "pm.environment.set('token', json.access_token);",
+              "pm.test('got a token', () => pm.expect(json.access_token).to.be.a('string'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "1. Create Ticket (valid) -> 201",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"subject\": \"Can't log in\",\n  \"description\": \"Password reset email never arrives\",\n  \"category\": \"ACCESS\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}" }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status is 201', () => pm.response.to.have.status(201));",
+              "const json = pm.response.json();",
+              "pm.environment.set('ticketId', json.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Create Ticket (invalid - blank subject) -> 400",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"subject\": \"\",\n  \"description\": \"x\",\n  \"category\": \"ACCESS\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}" }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": { "exec": ["pm.test('status is 400', () => pm.response.to.have.status(400));"] }
+        }
+      ]
+    },
+    {
+      "name": "3. Get Ticket by Id -> 200",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": { "raw": "{{baseUrl}}/{{ticketId}}" }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": { "exec": ["pm.test('status is 200', () => pm.response.to.have.status(200));"] }
+        }
+      ]
+    },
+    {
+      "name": "4. Get Ticket - Unknown Id -> 404",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": { "raw": "{{baseUrl}}/00000000-0000-0000-0000-000000000000" }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": { "exec": ["pm.test('status is 404', () => pm.response.to.have.status(404));"] }
+        }
+      ]
+    },
+    {
+      "name": "5. List Tickets (paginated) -> 200",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": {
+          "raw": "{{baseUrl}}?page=0&size=5",
+          "query": [
+            { "key": "page", "value": "0" },
+            { "key": "size", "value": "5" }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": { "exec": ["pm.test('status is 200', () => pm.response.to.have.status(200));"] }
+        }
+      ]
+    },
+    {
+      "name": "6. Update Ticket -> 200",
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"subject\": \"Can't log in - still broken\",\n  \"description\": \"Tried again, still no email\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/{{ticketId}}" }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": { "exec": ["pm.test('status is 200', () => pm.response.to.have.status(200));"] }
+        }
+      ]
+    },
+    {
+      "name": "7. Change Status: OPEN -> AI_TRIAGED (legal) -> 200",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": { "mode": "raw", "raw": "{\n  \"status\": \"AI_TRIAGED\"\n}" },
+        "url": { "raw": "{{baseUrl}}/{{ticketId}}/status" }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": { "exec": ["pm.test('status is 200', () => pm.response.to.have.status(200));"] }
+        }
+      ]
+    },
+    {
+      "name": "8. Change Status: AI_TRIAGED -> RESOLVED (illegal) -> 409",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": { "mode": "raw", "raw": "{\n  \"status\": \"RESOLVED\"\n}" },
+        "url": { "raw": "{{baseUrl}}/{{ticketId}}/status" }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": { "exec": ["pm.test('status is 409', () => pm.response.to.have.status(409));"] }
+        }
+      ]
+    },
+    {
+      "name": "9. List Tickets - No Auth -> 401",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{baseUrl}}" }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": { "exec": ["pm.test('status is 401', () => pm.response.to.have.status(401));"] }
+        }
+      ]
+    }
+  ]
+}
