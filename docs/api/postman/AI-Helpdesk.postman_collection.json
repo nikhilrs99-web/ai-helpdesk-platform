@@ -20,7 +20,7 @@
             { "key": "password", "value": "customer-local-dev-123" }
           ]
         },
-        "url": { "raw": "{{keycloakUrl}}/realms/helpdesk/protocol/openid-connect/token" }
+        "url": "{{keycloakUrl}}/realms/helpdesk/protocol/openid-connect/token"
       },
       "event": [
         {
@@ -47,7 +47,7 @@
           "mode": "raw",
           "raw": "{\n  \"subject\": \"Can't log in\",\n  \"description\": \"Password reset email never arrives\",\n  \"category\": \"ACCESS\"\n}"
         },
-        "url": { "raw": "{{baseUrl}}" }
+        "url": "{{baseUrl}}"
       },
       "event": [
         {
@@ -74,7 +74,7 @@
           "mode": "raw",
           "raw": "{\n  \"subject\": \"\",\n  \"description\": \"x\",\n  \"category\": \"ACCESS\"\n}"
         },
-        "url": { "raw": "{{baseUrl}}" }
+        "url": "{{baseUrl}}"
       },
       "event": [
         {
@@ -88,7 +88,7 @@
       "request": {
         "method": "GET",
         "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-        "url": { "raw": "{{baseUrl}}/{{ticketId}}" }
+        "url": "{{baseUrl}}/{{ticketId}}"
       },
       "event": [
         {
@@ -102,7 +102,7 @@
       "request": {
         "method": "GET",
         "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-        "url": { "raw": "{{baseUrl}}/00000000-0000-0000-0000-000000000000" }
+        "url": "{{baseUrl}}/00000000-0000-0000-0000-000000000000"
       },
       "event": [
         {
@@ -116,13 +116,7 @@
       "request": {
         "method": "GET",
         "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-        "url": {
-          "raw": "{{baseUrl}}?page=0&size=5",
-          "query": [
-            { "key": "page", "value": "0" },
-            { "key": "size", "value": "5" }
-          ]
-        }
+        "url": "{{baseUrl}}?page=0&size=5"
       },
       "event": [
         {
@@ -143,7 +137,7 @@
           "mode": "raw",
           "raw": "{\n  \"subject\": \"Can't log in - still broken\",\n  \"description\": \"Tried again, still no email\"\n}"
         },
-        "url": { "raw": "{{baseUrl}}/{{ticketId}}" }
+        "url": "{{baseUrl}}/{{ticketId}}"
       },
       "event": [
         {
@@ -161,7 +155,7 @@
           { "key": "Content-Type", "value": "application/json" }
         ],
         "body": { "mode": "raw", "raw": "{\n  \"status\": \"AI_TRIAGED\"\n}" },
-        "url": { "raw": "{{baseUrl}}/{{ticketId}}/status" }
+        "url": "{{baseUrl}}/{{ticketId}}/status"
       },
       "event": [
         {
@@ -179,7 +173,7 @@
           { "key": "Content-Type", "value": "application/json" }
         ],
         "body": { "mode": "raw", "raw": "{\n  \"status\": \"RESOLVED\"\n}" },
-        "url": { "raw": "{{baseUrl}}/{{ticketId}}/status" }
+        "url": "{{baseUrl}}/{{ticketId}}/status"
       },
       "event": [
         {
@@ -193,7 +187,7 @@
       "request": {
         "method": "GET",
         "header": [],
-        "url": { "raw": "{{baseUrl}}" }
+        "url": "{{baseUrl}}"
       },
       "event": [
         {
