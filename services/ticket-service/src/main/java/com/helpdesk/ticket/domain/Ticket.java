@@ -36,6 +36,9 @@ public class Ticket extends BaseEntity {
     @JoinColumn(name = "assigned_agent_id")
     private Agent assignedAgent;
 
+    @Column(name = "routed_team")
+    private String routedTeam;
+
     public String getSubject() {
         return subject;
     }
@@ -92,5 +95,13 @@ public class Ticket extends BaseEntity {
 
     public void setAssignedAgent(Agent assignedAgent) {
         this.assignedAgent = assignedAgent;
+    }
+
+    public String getRoutedTeam() {
+        return routedTeam;
+    }
+
+    public void setRoutedTeam(String routedTeam) {
+        this.routedTeam = routedTeam;
     }
 }

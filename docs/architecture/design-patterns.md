@@ -27,12 +27,21 @@ strict pipeline.
 [`domain/Ticket.java`](../../services/ticket-service/src/main/java/com/helpdesk/ticket/domain/Ticket.java)
 
 ## Strategy — Ticket routing rules
-**Status**: Planned (Week 3)
-**Where**: `ticket-service`, deciding which team/agent a new ticket is routed to
+**Status**: Implemented (Day 11)
+**Where**: `ticket-service`, deciding which team a new ticket is routed to
 **Why this over the obvious alternative**: Routing rules change often (a new team is added, priority thresholds
-get tweaked) and an `if/else` chain keyed on category grows unreadable fast. Strategy isolates each routing rule
-as its own class, so adding a rule means adding a class, not editing a growing conditional everyone is afraid to touch.
-**Code**: _link added once implemented_
+get tweaked) and an `if/else` chain keyed on category grows unreadable fast. Strategy isolates the routing
+decision behind one interface, so a whole new routing policy (e.g. an AI-driven one in Phase 5) can be swapped
+in via dependency injection without `TicketController` changing at all.
+**Implementation notes**: `RoutingStrategy` is a one-method interface (`determineTeam(Ticket)`); the only
+implementation today, `CategoryBasedRoutingStrategy`, uses a `switch` expression over `TicketCategory` rather
+than a `Map<TicketCategory, String>` — a switch with no default branch is exhaustive at compile time, so adding
+a new `TicketCategory` value later fails the build until this is updated, instead of silently defaulting (or
+NPEing) for a category nobody remembered to map. `TicketControllerRoutingTest` proves the interchangeability
+claim directly: it injects a fake `RoutingStrategy` and asserts the controller uses it, with zero changes to
+`TicketController` itself.
+**Code**: [`routing/RoutingStrategy.java`](../../services/ticket-service/src/main/java/com/helpdesk/ticket/routing/RoutingStrategy.java),
+[`routing/CategoryBasedRoutingStrategy.java`](../../services/ticket-service/src/main/java/com/helpdesk/ticket/routing/CategoryBasedRoutingStrategy.java)
 
 ## Factory — Ticket-type handlers
 **Status**: Planned (Week 3)

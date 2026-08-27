@@ -15,6 +15,10 @@ Request:
 `subject` (required, max 200 chars), `description` (required, max 5000 chars), `category` (required,
 one of `BUG`/`BILLING`/`ACCESS`/`HOW_TO`/`FEATURE_REQUEST`).
 
+On creation, `routedTeam` is also set automatically via the Strategy pattern (see
+[docs/architecture/design-patterns.md](../architecture/design-patterns.md)) — not client-supplied,
+purely derived from `category`.
+
 Response: `201 Created`, `Location: /api/tickets/{id}`, body is a `TicketResponse` (see below).
 
 ## `GET /api/tickets/{id}`
@@ -46,6 +50,7 @@ Changes the ticket's status via the State pattern (see
   "status": "OPEN|AI_TRIAGED|ASSIGNED|IN_PROGRESS|WAITING_FOR_CUSTOMER|RESOLVED|CLOSED",
   "requesterId": "keycloak subject uuid",
   "assignedAgentId": "uuid or null",
+  "routedTeam": "engineering|billing|support|product",
   "createdAt": "instant",
   "updatedAt": "instant"
 }

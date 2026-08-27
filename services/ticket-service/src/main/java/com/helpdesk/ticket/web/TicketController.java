@@ -3,6 +3,7 @@ package com.helpdesk.ticket.web;
 import com.helpdesk.ticket.domain.Ticket;
 import com.helpdesk.ticket.exception.TicketNotFoundException;
 import com.helpdesk.ticket.repository.TicketRepository;
+import com.helpdesk.ticket.routing.RoutingStrategy;
 import com.helpdesk.ticket.web.dto.ChangeStatusRequest;
 import com.helpdesk.ticket.web.dto.CreateTicketRequest;
 import com.helpdesk.ticket.web.dto.TicketResponse;
@@ -23,9 +24,11 @@ import java.util.UUID;
 public class TicketController {
 
     private final TicketRepository ticketRepository;
+    private final RoutingStrategy routingStrategy;
 
-    public TicketController(TicketRepository ticketRepository) {
+    public TicketController(TicketRepository ticketRepository, RoutingStrategy routingStrategy) {
         this.ticketRepository = ticketRepository;
+        this.routingStrategy = routingStrategy;
     }
 
     @PostMapping
@@ -37,6 +40,7 @@ public class TicketController {
         ticket.setCategory(request.category());
         // Never trust a client-supplied requester id - always derive it from the authenticated token.
         ticket.setRequesterId(jwt.getSubject());
+        ticket.setRoutedTeam(routingStrategy.determineTeam(ticket));
 
         Ticket saved = ticketRepository.save(ticket);
 

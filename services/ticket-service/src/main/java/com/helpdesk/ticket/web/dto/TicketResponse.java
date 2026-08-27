@@ -20,6 +20,7 @@ public record TicketResponse(
         TicketStatus status,
         String requesterId,
         UUID assignedAgentId,
+        String routedTeam,
         Instant createdAt,
         Instant updatedAt
 ) {
@@ -32,6 +33,7 @@ public record TicketResponse(
                 ticket.getStatus(),
                 ticket.getRequesterId(),
                 ticket.getAssignedAgent() == null ? null : ticket.getAssignedAgent().getId(),
+                ticket.getRoutedTeam(),
                 ticket.getCreatedAt(),
                 ticket.getUpdatedAt()
         );
