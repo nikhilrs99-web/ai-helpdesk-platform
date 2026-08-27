@@ -12,9 +12,10 @@ file — there is no "clicking through the admin console and hoping you remember
   flows enabled, so it can issue tokens for the real frontend later and for quick local testing via
   password grant now.
 - **Realm roles**: `customer`, `agent`, `admin`
-- **Test users**: `test-customer` (role `customer`) and `test-agent` (role `agent`), passwords in the
-  realm-export file. These are local-only fixtures with no relation to any real account — never reuse
-  them anywhere real.
+- **Test users**: `test-customer` (role `customer`), `test-agent` (role `agent`), and `test-customer-2`
+  (role `customer`, added Day 13 specifically to prove cross-owner denial end to end — a single customer
+  fixture can't test "customer A can't touch customer B's ticket"), passwords in the realm-export file.
+  These are local-only fixtures with no relation to any real account — never reuse them anywhere real.
 
 ## Getting a test token locally
 ```bash
@@ -53,3 +54,11 @@ default, which silently requires `firstName` and `lastName` on every user. Test 
 those two fields fail password-grant login with a generic `invalid_grant` / "Account is not fully set
 up" error — nothing about the error message points at the missing name fields. Both test users here
 include `firstName`/`lastName` specifically to avoid this.
+
+## Another one, hit adding `test-customer-2` (Day 13)
+"Restart every time" (per **What's defined** above) means a fresh *container*, not just a fresh
+*process*. `docker compose restart keycloak` restarts the same container without recreating it, so
+Keycloak's ephemeral H2 store survives the restart and `--import-realm` sees the realm already exists
+and skips re-importing it — a newly added user in the realm-export file silently doesn't show up, with
+no error anywhere. `docker compose up -d --force-recreate keycloak` (or `down` + `up`) actually
+discards the container and forces a real fresh import.

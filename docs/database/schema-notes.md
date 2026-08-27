@@ -28,6 +28,19 @@ depends on the ticket's category (BUG needs `browser`/`appVersion`, BILLING need
 in code by the matching `TicketTypeHandler`, not by a database constraint, since the requirement varies
 per row rather than being a fixed schema rule.
 
+**Bug found and fixed Day 13**: `@ElementCollection` defaults to `FetchType.LAZY`, which is normally
+fine, but `spring.jpa.open-in-view` is deliberately `false` here (see below) — so once a repository call
+returns, the Hibernate session that could lazily initialize `metadata` is already closed. `create()`
+never hit this (it serializes a brand-new, never-persisted `Ticket` whose `metadata` is a plain
+`HashMap`, not a Hibernate-managed lazy proxy), but `GET`/`PUT`/`PATCH .../status` all load the ticket
+via `findById` first — every one of them 500'd with `LazyInitializationException` wrapped as
+`HttpMessageNotWritableException` the first time they were exercised end to end against a real ticket.
+This had been latent since Day 12 (nothing before Day 13 actually called `GET`/`PUT`/`PATCH` against a
+ticket that has JPA-managed metadata) and only surfaced during Day 13's authorization verification.
+Fixed by marking the mapping `@ElementCollection(fetch = FetchType.EAGER)` — reasonable here since
+`TicketResponse` always serializes `metadata` anyway and it's at most a couple of key/value pairs, so
+there's no N+1 concern worth trading away simplicity for.
+
 ## Why no Flyway/Liquibase yet
 `spring.jpa.hibernate.ddl-auto: update` is used for now, deliberately, so the entity shape can keep
 changing freely while the domain model is still settling (through the rest of Week 2/3). Versioned

@@ -48,6 +48,19 @@
         { "type": "password", "value": "agent-local-dev-123", "temporary": false }
       ],
       "realmRoles": ["agent"]
+    },
+    {
+      "username": "test-customer-2",
+      "enabled": true,
+      "firstName": "Test",
+      "lastName": "CustomerTwo",
+      "email": "test-customer-2@example.local",
+      "emailVerified": true,
+      "requiredActions": [],
+      "credentials": [
+        { "type": "password", "value": "customer2-local-dev-123", "temporary": false }
+      ],
+      "realmRoles": ["customer"]
     }
   ]
 }

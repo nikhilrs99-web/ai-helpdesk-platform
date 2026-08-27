@@ -7,6 +7,7 @@ import com.helpdesk.ticket.exception.TicketNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -30,6 +31,13 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MissingTicketMetadataException.class)
     public ResponseEntity<ApiError> handleMissingMetadata(MissingTicketMetadataException ex, HttpServletRequest request) {
         return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
+    }
+
+    // Also catches AuthorizationDeniedException, thrown by @PreAuthorize denials since Spring
+    // Security 6's AuthorizationManager-based method security - it's a subclass of this type.
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiError> handleAccessDenied(AccessDeniedException ex, HttpServletRequest request) {
+        return build(HttpStatus.FORBIDDEN, "You do not have permission to perform this action", request);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

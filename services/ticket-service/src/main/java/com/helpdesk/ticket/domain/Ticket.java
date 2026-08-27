@@ -9,6 +9,7 @@ import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.MapKeyColumn;
@@ -48,9 +49,12 @@ public class Ticket extends BaseEntity {
     /**
      * Category-specific fields (e.g. browser/appVersion for BUG, invoiceId for BILLING),
      * validated and populated by the right TicketTypeHandler (Factory pattern) rather than
-     * being fixed columns - each category needs a different shape here.
+     * being fixed columns - each category needs a different shape here. EAGER because
+     * TicketResponse always serializes it and open-in-view is disabled - the default LAZY
+     * proxy can't be initialized once the request thread is past the repository call, since
+     * the Hibernate session that loaded the ticket is already closed by then.
      */
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "ticket_metadata", joinColumns = @JoinColumn(name = "ticket_id"))
     @MapKeyColumn(name = "meta_key")
     @Column(name = "meta_value")

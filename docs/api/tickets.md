@@ -1,8 +1,9 @@
 # Ticket API (ticket-service)
 
 All endpoints require a valid Keycloak access token (`Authorization: Bearer <token>`, see
-[docs/architecture/keycloak-setup.md](../architecture/keycloak-setup.md)). None require a specific role
-yet — see **Known limitation** below.
+[docs/architecture/keycloak-setup.md](../architecture/keycloak-setup.md)). Beyond that, each endpoint
+enforces one of two rules based on the caller's realm role (`customer`/`agent`/`admin`) — see
+**Authorization rules** below.
 
 ## `POST /api/tickets`
 Creates a ticket. `requesterId` is never taken from the request body — it's always the authenticated
@@ -35,23 +36,29 @@ A missing required key returns `400` with an `ApiError` naming exactly which key
 Response: `201 Created`, `Location: /api/tickets/{id}`, body is a `TicketResponse` (see below).
 
 ## `GET /api/tickets/{id}`
-Returns a `TicketResponse`, or `404` with an `ApiError` body if the id doesn't exist.
+Returns a `TicketResponse`. Owner or `agent`/`admin` only (see **Authorization rules**) — `403` for
+anyone else, `404` with an `ApiError` body if the id doesn't exist at all.
 
 ## `GET /api/tickets?page=0&size=20`
 Paginated list (standard Spring Data `Pageable` query params: `page`, `size`, `sort`). Returns a `Page`
-wrapper with `content`, `totalElements`, `totalPages`, etc.
+wrapper with `content`, `totalElements`, `totalPages`, etc. The *content* is scoped by role, not gated:
+a `customer` gets only their own tickets, an `agent`/`admin` gets every ticket — see **Authorization
+rules**.
 
 ## `PUT /api/tickets/{id}`
-Updates `subject`/`description` only. `404` if not found, `400` if validation fails.
+Updates `subject`/`description` only. Owner or `agent`/`admin` only. `404` if not found, `400` if
+validation fails, `403` if the caller isn't the owner and isn't `agent`/`admin`.
 
 ## `PATCH /api/tickets/{id}/status`
 Changes the ticket's status via the State pattern (see
-[docs/architecture/design-patterns.md](../architecture/design-patterns.md)).
+[docs/architecture/design-patterns.md](../architecture/design-patterns.md)). `agent`/`admin` only —
+customers cannot drive a ticket's workflow state, even on their own ticket.
 ```json
 { "status": "AI_TRIAGED" }
 ```
 `200` with the updated `TicketResponse` if the transition is legal from the ticket's current status,
-`409 Conflict` with an `ApiError` if it isn't, `404` if the ticket doesn't exist.
+`409 Conflict` with an `ApiError` if it isn't, `404` if the ticket doesn't exist, `403` if the caller
+isn't `agent`/`admin`.
 
 ## `TicketResponse` shape
 ```json
@@ -77,9 +84,30 @@ Every error response uses `common`'s `ApiError` shape:
 { "timestamp": "...", "status": 404, "error": "Not Found", "message": "...", "path": "/api/tickets/..." }
 ```
 
-## Known limitation (deliberate, not yet closed)
-**No ownership or role checks yet.** Any authenticated user — regardless of role, regardless of whether
-they created the ticket — can currently read, update, or change the status of *any* ticket. This is an
-IDOR-shaped gap (OWASP-relevant) and is deliberately deferred to Day 13, when Keycloak realm roles are
-wired into method-level `@PreAuthorize` checks. Flagged here so it's a known, tracked gap rather than a
-silent one.
+## Authorization rules (Day 13)
+Every endpoint requires a valid token; beyond that, two distinct rules apply depending on what the
+endpoint does:
+
+| Endpoint | Rule |
+|---|---|
+| `POST /api/tickets` | any authenticated caller — `requesterId` is always the token's own `sub`, so there's no cross-user write to guard against |
+| `GET /api/tickets/{id}` | owner or `agent`/`admin` |
+| `GET /api/tickets` | not gated — *scoped*: `customer` sees only their own tickets, `agent`/`admin` sees all |
+| `PUT /api/tickets/{id}` | owner or `agent`/`admin` |
+| `PATCH /api/tickets/{id}/status` | `agent`/`admin` only |
+
+**Owner-or-elevated checks** (`GET`/`PUT` by id) are enforced via `@PreAuthorize` calling a custom
+`TicketSecurity.isOwner(authentication, ticketId)` bean, not `@PostAuthorize` — ownership can't be read
+off the request (ticket ids are opaque UUIDs), and `PUT` mutates, so the check has to run *before* the
+method body, or a denied caller's write would already have been persisted by the time the 403 came back.
+
+**List scoping** is not a `@PreAuthorize` concern at all: a `Page<T>` can't be filtered row-by-row by a
+method-level annotation, so `GET /api/tickets` runs a different repository query depending on the
+caller's role (`findByRequesterId` vs `findAll`) rather than gating a single query's result.
+
+**A denied owner check returns `403`, not `404`, even when the ticket doesn't exist at all** — a
+`customer` requesting an id that isn't theirs gets the same `403` whether that ticket belongs to someone
+else or doesn't exist, since ownership can't be proven either way. This is a deliberate choice, not an
+oversight: ticket ids are random UUIDs (not sequentially enumerable), so masking existence behind a
+`404` buys little here, and a uniform `403` is simpler to reason about than trying to distinguish the two
+cases.

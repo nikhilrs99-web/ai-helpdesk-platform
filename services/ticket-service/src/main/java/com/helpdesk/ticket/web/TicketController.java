@@ -14,6 +14,9 @@ import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -58,16 +61,24 @@ public class TicketController {
                 .body(TicketResponse.from(saved));
     }
 
+    @PreAuthorize("hasAnyRole('agent','admin') or @ticketSecurity.isOwner(authentication, #id)")
     @GetMapping("/{id}")
     public TicketResponse getById(@PathVariable UUID id) {
         return TicketResponse.from(findOrThrow(id));
     }
 
     @GetMapping
-    public Page<TicketResponse> list(Pageable pageable) {
-        return ticketRepository.findAll(pageable).map(TicketResponse::from);
+    public Page<TicketResponse> list(Pageable pageable, Authentication authentication) {
+        // A customer only ever sees their own tickets; an agent/admin sees everything. This can't
+        // be expressed as a @PreAuthorize gate - that's all-or-nothing per method call, but a Page
+        // needs row-level filtering, so the scoping happens in which query actually runs.
+        if (isElevated(authentication)) {
+            return ticketRepository.findAll(pageable).map(TicketResponse::from);
+        }
+        return ticketRepository.findByRequesterId(authentication.getName(), pageable).map(TicketResponse::from);
     }
 
+    @PreAuthorize("hasAnyRole('agent','admin') or @ticketSecurity.isOwner(authentication, #id)")
     @PutMapping("/{id}")
     public TicketResponse update(@PathVariable UUID id, @Valid @RequestBody UpdateTicketRequest request) {
         Ticket ticket = findOrThrow(id);
@@ -78,6 +89,7 @@ public class TicketController {
         return TicketResponse.from(ticketRepository.save(ticket));
     }
 
+    @PreAuthorize("hasAnyRole('agent','admin')")
     @PatchMapping("/{id}/status")
     public TicketResponse changeStatus(@PathVariable UUID id, @Valid @RequestBody ChangeStatusRequest request) {
         Ticket ticket = findOrThrow(id);
@@ -87,5 +99,11 @@ public class TicketController {
 
     private Ticket findOrThrow(UUID id) {
         return ticketRepository.findById(id).orElseThrow(() -> new TicketNotFoundException(id));
+    }
+
+    private boolean isElevated(Authentication authentication) {
+        return authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(authority -> authority.equals("ROLE_agent") || authority.equals("ROLE_admin"));
     }
 }
