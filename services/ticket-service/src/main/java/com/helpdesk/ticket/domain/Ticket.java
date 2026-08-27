@@ -3,13 +3,19 @@ package com.helpdesk.ticket.domain;
 import com.helpdesk.common.enums.TicketCategory;
 import com.helpdesk.common.enums.TicketStatus;
 import com.helpdesk.ticket.domain.state.TicketState;
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.MapKeyColumn;
 import jakarta.persistence.Table;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @Entity
 @Table(name = "tickets")
@@ -38,6 +44,17 @@ public class Ticket extends BaseEntity {
 
     @Column(name = "routed_team")
     private String routedTeam;
+
+    /**
+     * Category-specific fields (e.g. browser/appVersion for BUG, invoiceId for BILLING),
+     * validated and populated by the right TicketTypeHandler (Factory pattern) rather than
+     * being fixed columns - each category needs a different shape here.
+     */
+    @ElementCollection
+    @CollectionTable(name = "ticket_metadata", joinColumns = @JoinColumn(name = "ticket_id"))
+    @MapKeyColumn(name = "meta_key")
+    @Column(name = "meta_value")
+    private Map<String, String> metadata = new HashMap<>();
 
     public String getSubject() {
         return subject;
@@ -103,5 +120,13 @@ public class Ticket extends BaseEntity {
 
     public void setRoutedTeam(String routedTeam) {
         this.routedTeam = routedTeam;
+    }
+
+    public Map<String, String> getMetadata() {
+        return metadata;
+    }
+
+    public void setMetadata(Map<String, String> metadata) {
+        this.metadata = metadata;
     }
 }

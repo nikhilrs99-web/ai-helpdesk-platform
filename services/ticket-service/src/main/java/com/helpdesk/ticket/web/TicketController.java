@@ -4,6 +4,8 @@ import com.helpdesk.ticket.domain.Ticket;
 import com.helpdesk.ticket.exception.TicketNotFoundException;
 import com.helpdesk.ticket.repository.TicketRepository;
 import com.helpdesk.ticket.routing.RoutingStrategy;
+import com.helpdesk.ticket.tickettype.TicketTypeHandler;
+import com.helpdesk.ticket.tickettype.TicketTypeHandlerFactory;
 import com.helpdesk.ticket.web.dto.ChangeStatusRequest;
 import com.helpdesk.ticket.web.dto.CreateTicketRequest;
 import com.helpdesk.ticket.web.dto.TicketResponse;
@@ -25,10 +27,13 @@ public class TicketController {
 
     private final TicketRepository ticketRepository;
     private final RoutingStrategy routingStrategy;
+    private final TicketTypeHandlerFactory typeHandlerFactory;
 
-    public TicketController(TicketRepository ticketRepository, RoutingStrategy routingStrategy) {
+    public TicketController(TicketRepository ticketRepository, RoutingStrategy routingStrategy,
+                             TicketTypeHandlerFactory typeHandlerFactory) {
         this.ticketRepository = ticketRepository;
         this.routingStrategy = routingStrategy;
+        this.typeHandlerFactory = typeHandlerFactory;
     }
 
     @PostMapping
@@ -41,6 +46,11 @@ public class TicketController {
         // Never trust a client-supplied requester id - always derive it from the authenticated token.
         ticket.setRequesterId(jwt.getSubject());
         ticket.setRoutedTeam(routingStrategy.determineTeam(ticket));
+
+        // Validates + populates category-specific metadata (Factory pattern); throws
+        // MissingTicketMetadataException (-> 400) if a required key for this category is absent.
+        TicketTypeHandler handler = typeHandlerFactory.forCategory(request.category());
+        handler.handle(ticket, request.metadata());
 
         Ticket saved = ticketRepository.save(ticket);
 

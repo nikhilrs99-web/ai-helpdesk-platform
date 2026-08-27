@@ -2,7 +2,8 @@
 
 ## Entities (ticket-service, Day 8)
 - **Ticket** — subject, description, category (`TicketCategory`), status (`TicketStatus`, defaults
-  `OPEN`), requesterId (Keycloak subject), optional assignedAgent (FK to Agent)
+  `OPEN`), requesterId (Keycloak subject), optional assignedAgent (FK to Agent), routedTeam (Day 11,
+  Strategy pattern), metadata (Day 12, Factory pattern — see below)
 - **TicketComment** — belongs to a Ticket, authorId, body, aiDrafted flag
 - **Agent** — keycloakSubjectId (unique), displayName, team
 - **Sla** — SLA targets by (category, slaType), e.g. (BILLING, FIRST_RESPONSE, 240 minutes). A
@@ -18,6 +19,14 @@ these values mean.
 
 No `User`/`Customer` entity exists here deliberately — identity is owned by Keycloak (ADR-0001); a
 ticket only stores a Keycloak subject string, not a local copy of the user.
+
+## `ticket_metadata` (Day 12)
+`Ticket.metadata` (`Map<String, String>`) is mapped via JPA's `@ElementCollection`/`@CollectionTable` to
+a side table, not a JSON column: `ticket_metadata(ticket_id, meta_key, meta_value)`, with a composite
+primary key on `(ticket_id, meta_key)` that Hibernate derives automatically. Which keys are required
+depends on the ticket's category (BUG needs `browser`/`appVersion`, BILLING needs `invoiceId`) — enforced
+in code by the matching `TicketTypeHandler`, not by a database constraint, since the requirement varies
+per row rather than being a fixed schema rule.
 
 ## Why no Flyway/Liquibase yet
 `spring.jpa.hibernate.ddl-auto: update` is used for now, deliberately, so the entity shape can keep

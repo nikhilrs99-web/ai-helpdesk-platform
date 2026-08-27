@@ -4,11 +4,18 @@ import com.helpdesk.common.enums.TicketCategory;
 import com.helpdesk.ticket.domain.Ticket;
 import com.helpdesk.ticket.repository.TicketRepository;
 import com.helpdesk.ticket.routing.RoutingStrategy;
+import com.helpdesk.ticket.tickettype.BillingTicketHandler;
+import com.helpdesk.ticket.tickettype.BugTicketHandler;
+import com.helpdesk.ticket.tickettype.DefaultTicketTypeHandler;
+import com.helpdesk.ticket.tickettype.TicketTypeHandlerFactory;
 import com.helpdesk.ticket.web.dto.CreateTicketRequest;
 import com.helpdesk.ticket.web.dto.TicketResponse;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.jwt.Jwt;
+
+import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -30,9 +37,13 @@ class TicketControllerRoutingTest {
         when(repository.save(any(Ticket.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         RoutingStrategy fakeStrategy = ticket -> "quality-assurance";
-        TicketController controller = new TicketController(repository, fakeStrategy);
+        TicketTypeHandlerFactory typeHandlerFactory = new TicketTypeHandlerFactory(
+                List.of(new BugTicketHandler(), new BillingTicketHandler(), new DefaultTicketTypeHandler()));
+        TicketController controller = new TicketController(repository, fakeStrategy, typeHandlerFactory);
 
-        CreateTicketRequest request = new CreateTicketRequest("Crashes on save", "Stack trace attached", TicketCategory.BUG);
+        CreateTicketRequest request = new CreateTicketRequest(
+                "Crashes on save", "Stack trace attached", TicketCategory.BUG,
+                Map.of("browser", "Chrome", "appVersion", "1.2.3"));
         Jwt jwt = Jwt.withTokenValue("fake-token")
                 .header("alg", "none")
                 .claim("sub", "test-subject-id")

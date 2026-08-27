@@ -13,11 +13,24 @@ Request:
 { "subject": "Double charged", "description": "Billed twice this month", "category": "BILLING" }
 ```
 `subject` (required, max 200 chars), `description` (required, max 5000 chars), `category` (required,
-one of `BUG`/`BILLING`/`ACCESS`/`HOW_TO`/`FEATURE_REQUEST`).
+one of `BUG`/`BILLING`/`ACCESS`/`HOW_TO`/`FEATURE_REQUEST`), `metadata` (optional map of strings,
+requirements depend on `category` — see below).
 
 On creation, `routedTeam` is also set automatically via the Strategy pattern (see
 [docs/architecture/design-patterns.md](../architecture/design-patterns.md)) — not client-supplied,
 purely derived from `category`.
+
+### Category-specific metadata (Factory pattern)
+Which `metadata` keys are required depends on `category`, enforced by the matching `TicketTypeHandler`:
+
+| Category | Required keys | Notes |
+|---|---|---|
+| `BUG` | `browser`, `appVersion` | both required, or `400` |
+| `BILLING` | `invoiceId` | required; `currency` defaults to `"USD"` if not supplied |
+| `ACCESS`, `HOW_TO`, `FEATURE_REQUEST` | none | `metadata` can be omitted entirely |
+
+A missing required key returns `400` with an `ApiError` naming exactly which keys are missing, e.g.
+`"Missing required metadata for category BUG: [appVersion, browser]"`.
 
 Response: `201 Created`, `Location: /api/tickets/{id}`, body is a `TicketResponse` (see below).
 
@@ -51,6 +64,7 @@ Changes the ticket's status via the State pattern (see
   "requesterId": "keycloak subject uuid",
   "assignedAgentId": "uuid or null",
   "routedTeam": "engineering|billing|support|product",
+  "metadata": { "key": "value" },
   "createdAt": "instant",
   "updatedAt": "instant"
 }
@@ -66,6 +80,6 @@ Every error response uses `common`'s `ApiError` shape:
 ## Known limitation (deliberate, not yet closed)
 **No ownership or role checks yet.** Any authenticated user — regardless of role, regardless of whether
 they created the ticket — can currently read, update, or change the status of *any* ticket. This is an
-IDOR-shaped gap (OWASP-relevant) and is deliberately deferred to Day 12, when Keycloak realm roles are
-wired into method-level `@PreAuthorize` checks (see the design-patterns/plan sequencing). Flagged here so
-it's a known, tracked gap rather than a silent one.
+IDOR-shaped gap (OWASP-relevant) and is deliberately deferred to Day 13, when Keycloak realm roles are
+wired into method-level `@PreAuthorize` checks. Flagged here so it's a known, tracked gap rather than a
+silent one.

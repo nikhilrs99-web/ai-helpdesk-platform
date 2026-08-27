@@ -2,6 +2,7 @@ package com.helpdesk.ticket.web;
 
 import com.helpdesk.common.dto.ApiError;
 import com.helpdesk.ticket.domain.state.IllegalTicketTransitionException;
+import com.helpdesk.ticket.exception.MissingTicketMetadataException;
 import com.helpdesk.ticket.exception.TicketNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
@@ -24,6 +25,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalTicketTransitionException.class)
     public ResponseEntity<ApiError> handleIllegalTransition(IllegalTicketTransitionException ex, HttpServletRequest request) {
         return build(HttpStatus.CONFLICT, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(MissingTicketMetadataException.class)
+    public ResponseEntity<ApiError> handleMissingMetadata(MissingTicketMetadataException ex, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

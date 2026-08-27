@@ -44,12 +44,21 @@ claim directly: it injects a fake `RoutingStrategy` and asserts the controller u
 [`routing/CategoryBasedRoutingStrategy.java`](../../services/ticket-service/src/main/java/com/helpdesk/ticket/routing/CategoryBasedRoutingStrategy.java)
 
 ## Factory — Ticket-type handlers
-**Status**: Planned (Week 3)
+**Status**: Implemented (Day 12)
 **Where**: `ticket-service`, constructing the right handler for BUG / BILLING / ACCESS / HOW_TO / FEATURE_REQUEST tickets
 **Why this over the obvious alternative**: Each ticket type needs different required fields and different
 downstream behavior (BUG captures browser/version, BILLING captures an invoice ID). A Factory centralizes
 "given a category, build the right handler" so callers don't each need their own duplicated switch statement.
-**Code**: _link added once implemented_
+**Implementation notes**: `TicketTypeHandler` has one required-metadata concept per category; `BugTicketHandler`
+and `BillingTicketHandler` each have real, distinct requirements, while ACCESS/HOW_TO/FEATURE_REQUEST
+deliberately share one `DefaultTicketTypeHandler` rather than three near-empty classes — the Factory only needs
+a distinct class where behavior actually differs. `TicketTypeHandlerFactory`'s constructor builds its lookup
+map from every injected handler and **fails fast at application startup** (not at request time) if two handlers
+claim the same category, or if any `TicketCategory` has no handler at all — the same "catch missing coverage as
+early as possible" spirit as the Strategy pattern's exhaustive switch expression, just enforced at startup
+instead of compile time, since this map is built dynamically from Spring-injected beans.
+**Code**: [`tickettype/TicketTypeHandler.java`](../../services/ticket-service/src/main/java/com/helpdesk/ticket/tickettype/TicketTypeHandler.java),
+[`tickettype/TicketTypeHandlerFactory.java`](../../services/ticket-service/src/main/java/com/helpdesk/ticket/tickettype/TicketTypeHandlerFactory.java)
 
 ## Observer — Notification dispatch
 **Status**: Planned (Week 4)

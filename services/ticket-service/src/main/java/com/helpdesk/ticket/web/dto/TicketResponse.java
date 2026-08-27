@@ -5,6 +5,7 @@ import com.helpdesk.common.enums.TicketStatus;
 import com.helpdesk.ticket.domain.Ticket;
 
 import java.time.Instant;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -21,6 +22,7 @@ public record TicketResponse(
         String requesterId,
         UUID assignedAgentId,
         String routedTeam,
+        Map<String, String> metadata,
         Instant createdAt,
         Instant updatedAt
 ) {
@@ -34,6 +36,7 @@ public record TicketResponse(
                 ticket.getRequesterId(),
                 ticket.getAssignedAgent() == null ? null : ticket.getAssignedAgent().getId(),
                 ticket.getRoutedTeam(),
+                ticket.getMetadata(),
                 ticket.getCreatedAt(),
                 ticket.getUpdatedAt()
         );
