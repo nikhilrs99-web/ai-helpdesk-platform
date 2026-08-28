@@ -1,11 +1,12 @@
 {
   "info": {
     "name": "AI Helpdesk - Ticket API",
+    "description": "Covers docs/api/tickets.md end to end: auth, create (Day 11 routing + Day 12 per-category metadata), get, list, update, and status changes under Day 13's authorization rules. Needs three Keycloak identities - test-customer (owns the tickets used below), test-agent (elevated), and test-customer-2 (a second, unrelated customer, used to prove cross-owner denial with a real token) - all local-only fixtures in infrastructure/docker/keycloak/realm-export/helpdesk-realm.json. Run top to bottom with the AI Helpdesk - Local environment selected.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
     {
-      "name": "0. Get Token (test-customer)",
+      "name": "0a. Get Token (test-customer)",
       "request": {
         "method": "POST",
         "header": [
@@ -29,6 +30,39 @@
             "exec": [
               "const json = pm.response.json();",
               "pm.environment.set('token', json.access_token);",
+              "pm.test('got a token', () => pm.expect(json.access_token).to.be.a('string'));",
+              "const payload = JSON.parse(atob(json.access_token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));",
+              "pm.environment.set('customerSub', payload.sub);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "0b. Get Token (test-customer-2)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+        ],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            { "key": "client_id", "value": "helpdesk-frontend" },
+            { "key": "grant_type", "value": "password" },
+            { "key": "username", "value": "test-customer-2" },
+            { "key": "password", "value": "customer2-local-dev-123" }
+          ]
+        },
+        "url": "{{keycloakUrl}}/realms/helpdesk/protocol/openid-connect/token"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "pm.environment.set('customer2Token', json.access_token);",
               "pm.test('got a token', () => pm.expect(json.access_token).to.be.a('string'));"
             ]
           }
@@ -36,7 +70,38 @@
       ]
     },
     {
-      "name": "1. Create Ticket (valid) -> 201",
+      "name": "0c. Get Token (test-agent)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+        ],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            { "key": "client_id", "value": "helpdesk-frontend" },
+            { "key": "grant_type", "value": "password" },
+            { "key": "username", "value": "test-agent" },
+            { "key": "password", "value": "agent-local-dev-123" }
+          ]
+        },
+        "url": "{{keycloakUrl}}/realms/helpdesk/protocol/openid-connect/token"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "pm.environment.set('agentToken', json.access_token);",
+              "pm.test('got a token', () => pm.expect(json.access_token).to.be.a('string'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "1. Create ACCESS Ticket (valid) -> 201",
       "request": {
         "method": "POST",
         "header": [
@@ -56,7 +121,8 @@
             "exec": [
               "pm.test('status is 201', () => pm.response.to.have.status(201));",
               "const json = pm.response.json();",
-              "pm.environment.set('ticketId', json.id);"
+              "pm.environment.set('ticketId', json.id);",
+              "pm.test('routedTeam is support', () => pm.expect(json.routedTeam).to.eql('support'));"
             ]
           }
         }
@@ -84,7 +150,92 @@
       ]
     },
     {
-      "name": "3. Get Ticket by Id -> 200",
+      "name": "3. Create BUG Ticket (no metadata) -> 400",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"subject\": \"App crashes on save\",\n  \"description\": \"Stack trace attached\",\n  \"category\": \"BUG\"\n}"
+        },
+        "url": "{{baseUrl}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status is 400', () => pm.response.to.have.status(400));",
+              "const json = pm.response.json();",
+              "pm.test('names the missing keys', () => {",
+              "  pm.expect(json.message).to.include('browser');",
+              "  pm.expect(json.message).to.include('appVersion');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Create BUG Ticket (with metadata) -> 201",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"subject\": \"App crashes on save\",\n  \"description\": \"Stack trace attached\",\n  \"category\": \"BUG\",\n  \"metadata\": { \"browser\": \"Chrome\", \"appVersion\": \"1.2.3\" }\n}"
+        },
+        "url": "{{baseUrl}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status is 201', () => pm.response.to.have.status(201));",
+              "const json = pm.response.json();",
+              "pm.environment.set('bugTicketId', json.id);",
+              "pm.test('routedTeam is engineering', () => pm.expect(json.routedTeam).to.eql('engineering'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Create BILLING Ticket (invoiceId only, currency defaulted) -> 201",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"subject\": \"Overcharged this month\",\n  \"description\": \"Billed twice\",\n  \"category\": \"BILLING\",\n  \"metadata\": { \"invoiceId\": \"INV-9001\" }\n}"
+        },
+        "url": "{{baseUrl}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status is 201', () => pm.response.to.have.status(201));",
+              "const json = pm.response.json();",
+              "pm.test('currency defaulted to USD', () => pm.expect(json.metadata.currency).to.eql('USD'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Get Ticket by Id as Owner -> 200",
       "request": {
         "method": "GET",
         "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
@@ -98,10 +249,38 @@
       ]
     },
     {
-      "name": "4. Get Ticket - Unknown Id -> 404",
+      "name": "7. Get Ticket by Id as Non-Owner Customer -> 403",
       "request": {
         "method": "GET",
-        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "header": [{ "key": "Authorization", "value": "Bearer {{customer2Token}}" }],
+        "url": "{{baseUrl}}/{{ticketId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": { "exec": ["pm.test('status is 403', () => pm.response.to.have.status(403));"] }
+        }
+      ]
+    },
+    {
+      "name": "8. Get Ticket by Id as Agent -> 200",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{agentToken}}" }],
+        "url": "{{baseUrl}}/{{ticketId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": { "exec": ["pm.test('status is 200', () => pm.response.to.have.status(200));"] }
+        }
+      ]
+    },
+    {
+      "name": "9. Get Ticket - Unknown Id as Agent -> 404",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{agentToken}}" }],
         "url": "{{baseUrl}}/00000000-0000-0000-0000-000000000000"
       },
       "event": [
@@ -112,11 +291,48 @@
       ]
     },
     {
-      "name": "5. List Tickets (paginated) -> 200",
+      "name": "10. Get Ticket - Unknown Id as Customer -> 403 (masked, not 404)",
       "request": {
         "method": "GET",
         "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-        "url": "{{baseUrl}}?page=0&size=5"
+        "url": "{{baseUrl}}/00000000-0000-0000-0000-000000000000"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": { "exec": ["pm.test('status is 403', () => pm.response.to.have.status(403));"] }
+        }
+      ]
+    },
+    {
+      "name": "11. List Tickets as Customer -> 200, scoped to own",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}?page=0&size=50"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status is 200', () => pm.response.to.have.status(200));",
+              "const json = pm.response.json();",
+              "const customerSub = pm.environment.get('customerSub');",
+              "pm.test('every ticket belongs to test-customer', () => {",
+              "  json.content.forEach(t => pm.expect(t.requesterId).to.eql(customerSub));",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "12. List Tickets as Agent -> 200, sees everything",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{agentToken}}" }],
+        "url": "{{baseUrl}}?page=0&size=50"
       },
       "event": [
         {
@@ -126,7 +342,7 @@
       ]
     },
     {
-      "name": "6. Update Ticket -> 200",
+      "name": "13. Update Ticket as Owner -> 200",
       "request": {
         "method": "PUT",
         "header": [
@@ -147,11 +363,50 @@
       ]
     },
     {
-      "name": "7. Change Status: OPEN -> AI_TRIAGED (legal) -> 200",
+      "name": "14. Update Ticket as Non-Owner Customer -> 403",
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{customer2Token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"subject\": \"HIJACKED\",\n  \"description\": \"should not be allowed\"\n}"
+        },
+        "url": "{{baseUrl}}/{{ticketId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": { "exec": ["pm.test('status is 403', () => pm.response.to.have.status(403));"] }
+        }
+      ]
+    },
+    {
+      "name": "15. Change Status as Owner -> 403 (agent/admin only)",
       "request": {
         "method": "PATCH",
         "header": [
           { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": { "mode": "raw", "raw": "{\n  \"status\": \"AI_TRIAGED\"\n}" },
+        "url": "{{baseUrl}}/{{ticketId}}/status"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": { "exec": ["pm.test('status is 403', () => pm.response.to.have.status(403));"] }
+        }
+      ]
+    },
+    {
+      "name": "16. Change Status as Agent: OPEN -> AI_TRIAGED (legal) -> 200",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{agentToken}}" },
           { "key": "Content-Type", "value": "application/json" }
         ],
         "body": { "mode": "raw", "raw": "{\n  \"status\": \"AI_TRIAGED\"\n}" },
@@ -165,11 +420,11 @@
       ]
     },
     {
-      "name": "8. Change Status: AI_TRIAGED -> RESOLVED (illegal) -> 409",
+      "name": "17. Change Status as Agent: AI_TRIAGED -> RESOLVED (illegal) -> 409",
       "request": {
         "method": "PATCH",
         "header": [
-          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Authorization", "value": "Bearer {{agentToken}}" },
           { "key": "Content-Type", "value": "application/json" }
         ],
         "body": { "mode": "raw", "raw": "{\n  \"status\": \"RESOLVED\"\n}" },
@@ -183,7 +438,7 @@
       ]
     },
     {
-      "name": "9. List Tickets - No Auth -> 401",
+      "name": "18. List Tickets - No Auth -> 401",
       "request": {
         "method": "GET",
         "header": [],
