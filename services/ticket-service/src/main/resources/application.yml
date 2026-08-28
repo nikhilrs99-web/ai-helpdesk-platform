@@ -13,11 +13,22 @@ spring:
     url: jdbc:postgresql://localhost:5433/${POSTGRES_DB:helpdesk}
     username: ${POSTGRES_USER:helpdesk_app}
     password: ${POSTGRES_PASSWORD:localdevpassword123}
+  flyway:
+    # This app's tables already existed (created by ddl-auto: update through Day 15) before
+    # Flyway was introduced - baseline-on-migrate marks whatever's already there as V1 instead
+    # of erroring out over a non-empty, unmanaged schema. A genuinely fresh database (no tables
+    # yet) just runs V1__baseline_schema.sql for real instead of baselining - see
+    # docs/database/schema-notes.md for how both paths were verified.
+    baseline-on-migrate: true
+    baseline-version: 1
   jpa:
     open-in-view: false
     show-sql: true
     hibernate:
-      ddl-auto: update
+      # Flyway now owns the schema; Hibernate only checks its entity mappings still match
+      # what's actually there instead of silently altering it - see schema-notes.md for why
+      # this replaces ddl-auto: update.
+      ddl-auto: validate
     properties:
       hibernate:
         format_sql: true

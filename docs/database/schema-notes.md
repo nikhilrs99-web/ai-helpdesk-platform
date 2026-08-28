@@ -41,12 +41,37 @@ Fixed by marking the mapping `@ElementCollection(fetch = FetchType.EAGER)` — r
 `TicketResponse` always serializes `metadata` anyway and it's at most a couple of key/value pairs, so
 there's no N+1 concern worth trading away simplicity for.
 
-## Why no Flyway/Liquibase yet
-`spring.jpa.hibernate.ddl-auto: update` is used for now, deliberately, so the entity shape can keep
-changing freely while the domain model is still settling (through the rest of Week 2/3). Versioned
-migrations are planned once the shape stabilizes, per the original build plan. This is a sequencing
-choice, not an oversight — `ddl-auto: update` should never be used once real data exists that a
-migration tool needs to safely evolve around.
+## Flyway (Day 16) — replacing `ddl-auto: update`
+The domain model held stable across Days 13–15 with no shape changes, so per the original sequencing
+plan (`ddl-auto: update` was always meant to be temporary, never meant to survive contact with real
+data), `spring.jpa.hibernate.ddl-auto` is now `validate` and Flyway owns the schema. Hibernate checks
+its entity mappings still match what's actually in the database at startup; it no longer alters
+anything.
+
+**Why Flyway over Liquibase**: no strong reason to prefer one over the other here — both are
+well-established, both integrate the same way with Spring Boot. Flyway's plain-SQL migrations fit this
+project better than Liquibase's XML/YAML changelog format, since every migration so far is a
+straightforward DDL change with no need for Liquibase's rollback-changeset machinery.
+
+**The baseline problem**: this app's tables already existed — built up incrementally by `ddl-auto:
+update` across Days 8, 9, 11, 12, and 13 — before Flyway was ever introduced. Flyway normally expects to
+create a schema from nothing; pointed at a database that already has unmanaged tables, it refuses to
+run rather than guess whether those tables match what a migration would create. `spring.flyway.
+baseline-on-migrate: true` (plus `baseline-version: 1`, see `application.yml`) tells Flyway to instead
+mark an already-populated schema as already being at V1, without re-running the migration against
+tables that are already there.
+
+`db/migration/V1__baseline_schema.sql` captures that exact schema — pulled from the real database with
+`pg_dump --schema-only`, not reconstructed by hand from the JPA annotations, specifically so it's a
+byte-for-byte snapshot of what Hibernate had actually built, not what the entities are theoretically
+supposed to produce. Any future schema change is a new `V2__...sql`, `V3__...sql`, etc. — `ddl-auto:
+update` is not coming back.
+
+**Why this matters for exactly one existing gap**: `TicketRepositoryIT` (Day 8, still blocked locally by
+the Windows/Docker npipe issue below) runs against a fresh Testcontainers-provisioned Postgres — once it
+can run, Flyway will migrate that container from empty using `V1__baseline_schema.sql` for real, the
+same code path verified below, rather than the baseline path used against this already-populated local
+dev database.
 
 ## Verification
 The schema was verified directly against a real (non-mocked) PostgreSQL instance two ways:
@@ -57,6 +82,27 @@ The schema was verified directly against a real (non-mocked) PostgreSQL instance
    through the real repositories and asserts the auditing fields and the FK relationship are populated
    correctly — written using the standard `*IT.java` + Failsafe convention (`mvn verify`), not `mvn
    test`, since it's a slower integration test against real infrastructure, not a unit test.
+
+**Flyway verification (Day 16)** — both paths a migration tool can be exercised through were checked
+directly, not assumed from a green startup log alone:
+- **Fresh database**: created a throwaway `flyway_fresh_test` database in the same Postgres container,
+  pointed ticket-service at it, and confirmed the startup log showed Flyway actually running
+  `V1__baseline_schema.sql` (`Migrating schema "public" to version "1"`, not baselining), followed by
+  Hibernate's `validate` passing with no errors — proof the migration file itself is correct, not just
+  that baselining suppresses a check. `pg_dump --schema-only` against that fresh database and `diff`
+  against the original dev database's dump showed the two schemas identical (the only differences were
+  pg_dump's own randomly-generated session tokens and cosmetic re-canonicalization of the `CHECK`
+  constraint text, confirmed non-functional by directly inserting an invalid category and confirming
+  the constraint still rejected it). The throwaway database was dropped afterward.
+- **Existing, already-populated database**: restarted ticket-service against the real local dev
+  database (the one with several days' worth of manually-created test tickets already in it) and
+  confirmed the log showed `Successfully baselined schema with version: 1`, followed by Hibernate's
+  `validate` passing — proof the retrofit path works without touching existing data. Confirmed via
+  `SELECT * FROM flyway_schema_history` (one `BASELINE` row, version 1) and `SELECT count(*) FROM
+  tickets` (unchanged) directly in Postgres.
+- Ran the full unit test suite (52/52 passing, unaffected — none of them hit a real database) and the
+  full `scripts/test-ticket-api.ps1` regression pass (19/19) against the now-Flyway-managed database, to
+  confirm the switch from `ddl-auto: update` didn't change any actual application behavior.
 
 **Known local limitation**: on this Windows machine, `TicketRepositoryIT` cannot currently execute —
 Testcontainers' Docker client gets a malformed/stub response from Docker Desktop's Engine API over the
