@@ -59,4 +59,5 @@ See [docs/architecture/design-patterns.md](docs/architecture/design-patterns.md)
 | Day 17 | kb-service scaffolding: KnowledgeArticle entity with PostgreSQL `tsvector` for full-text search (populated automatically via database trigger), Flyway schema migration, JPA Auditing, and CRUD REST endpoints including a keyword search endpoint utilizing `ts_rank` sorting |
 | Day 18 | 
 otification-service skeleton added: Implemented Observer-style notifier pattern (NotificationObserver, NotificationDispatcher) and a temporary direct REST endpoint (NotificationController) to act as the notification receiver before Kafka is introduced |
+| Phase 2 Wrap-up | Completed Days 19-25: Wired ticket-service to notification-service via direct REST (Day 19), added Testcontainers integration test for kb-service (Day 20), scaffolded api-gateway with routing (Day 21) and centralized JWT validation (Day 22), added multi-stage Dockerfiles for all microservices (Days 23-24), and wired everything into docker-compose.yml for a full stack deployment (Day 25) |
 
