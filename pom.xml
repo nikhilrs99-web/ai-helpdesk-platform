@@ -45,6 +45,7 @@
         <module>services/ai-service</module>
         <module>services/notification-service</module>
         <module>services/analytics-service</module>
+        <module>services/api-gateway</module>
     </modules>
 
     <build>

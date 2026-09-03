@@ -31,12 +31,14 @@ public class TicketController {
     private final TicketRepository ticketRepository;
     private final RoutingStrategy routingStrategy;
     private final TicketTypeHandlerFactory typeHandlerFactory;
+    private final org.springframework.web.client.RestClient restClient;
 
     public TicketController(TicketRepository ticketRepository, RoutingStrategy routingStrategy,
-                             TicketTypeHandlerFactory typeHandlerFactory) {
+                             TicketTypeHandlerFactory typeHandlerFactory, org.springframework.web.client.RestClient.Builder restClientBuilder) {
         this.ticketRepository = ticketRepository;
         this.routingStrategy = routingStrategy;
         this.typeHandlerFactory = typeHandlerFactory;
+        this.restClient = restClientBuilder.baseUrl("http://localhost:8084").build();
     }
 
     @PostMapping
@@ -56,6 +58,26 @@ public class TicketController {
         handler.handle(ticket, request.metadata());
 
         Ticket saved = ticketRepository.save(ticket);
+
+        // Day 19: Temporary direct REST call to notification-service
+        try {
+            com.helpdesk.common.event.TicketCreatedEvent event = new com.helpdesk.common.event.TicketCreatedEvent(
+                    UUID.randomUUID(),
+                    com.helpdesk.common.event.TicketCreatedEvent.CURRENT_VERSION,
+                    java.time.Instant.now(),
+                    saved.getId(),
+                    saved.getCategory(),
+                    saved.getRequesterId()
+            );
+            restClient.post()
+                    .uri("/api/notifications/ticket-created")
+                    .body(event)
+                    .retrieve()
+                    .toBodilessEntity();
+        } catch (Exception e) {
+            // Ignore notification failure so we don't break ticket creation
+            System.err.println("Failed to notify notification-service: " + e.getMessage());
+        }
 
         return ResponseEntity.created(URI.create("/api/tickets/" + saved.getId()))
                 .body(TicketResponse.from(saved));
