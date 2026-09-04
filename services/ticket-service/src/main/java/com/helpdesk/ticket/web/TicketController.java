@@ -33,28 +33,35 @@ public class TicketController {
     private final TicketTypeHandlerFactory typeHandlerFactory;
     private final com.helpdesk.ticket.outbox.OutboxRepository outboxRepository;
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+    private final com.helpdesk.ticket.redis.RateLimiterService rateLimiterService;
 
     public TicketController(TicketRepository ticketRepository, RoutingStrategy routingStrategy,
                              TicketTypeHandlerFactory typeHandlerFactory, 
                              com.helpdesk.ticket.outbox.OutboxRepository outboxRepository,
-                             com.fasterxml.jackson.databind.ObjectMapper objectMapper) {
+                             com.fasterxml.jackson.databind.ObjectMapper objectMapper,
+                             com.helpdesk.ticket.redis.RateLimiterService rateLimiterService) {
         this.ticketRepository = ticketRepository;
         this.routingStrategy = routingStrategy;
         this.typeHandlerFactory = typeHandlerFactory;
         this.outboxRepository = outboxRepository;
         this.objectMapper = objectMapper;
+        this.rateLimiterService = rateLimiterService;
     }
 
     @PostMapping
     @org.springframework.transaction.annotation.Transactional
     public ResponseEntity<TicketResponse> create(@Valid @RequestBody CreateTicketRequest request,
                                                   @AuthenticationPrincipal Jwt jwt) {
+        String userId = jwt.getSubject();
+        if (!rateLimiterService.isAllowed(userId)) {
+            return ResponseEntity.status(429).build();
+        }
+
         Ticket ticket = new Ticket();
         ticket.setSubject(request.subject());
         ticket.setDescription(request.description());
         ticket.setCategory(request.category());
-        // Never trust a client-supplied requester id - always derive it from the authenticated token.
-        ticket.setRequesterId(jwt.getSubject());
+        ticket.setRequesterId(userId);
         ticket.setRoutedTeam(routingStrategy.determineTeam(ticket));
 
         // Validates + populates category-specific metadata (Factory pattern); throws
