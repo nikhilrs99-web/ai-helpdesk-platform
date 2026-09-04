@@ -31,17 +31,22 @@ public class TicketController {
     private final TicketRepository ticketRepository;
     private final RoutingStrategy routingStrategy;
     private final TicketTypeHandlerFactory typeHandlerFactory;
-    private final org.springframework.web.client.RestClient restClient;
+    private final com.helpdesk.ticket.outbox.OutboxRepository outboxRepository;
+    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
     public TicketController(TicketRepository ticketRepository, RoutingStrategy routingStrategy,
-                             TicketTypeHandlerFactory typeHandlerFactory, org.springframework.web.client.RestClient.Builder restClientBuilder) {
+                             TicketTypeHandlerFactory typeHandlerFactory, 
+                             com.helpdesk.ticket.outbox.OutboxRepository outboxRepository,
+                             com.fasterxml.jackson.databind.ObjectMapper objectMapper) {
         this.ticketRepository = ticketRepository;
         this.routingStrategy = routingStrategy;
         this.typeHandlerFactory = typeHandlerFactory;
-        this.restClient = restClientBuilder.baseUrl("http://localhost:8084").build();
+        this.outboxRepository = outboxRepository;
+        this.objectMapper = objectMapper;
     }
 
     @PostMapping
+    @org.springframework.transaction.annotation.Transactional
     public ResponseEntity<TicketResponse> create(@Valid @RequestBody CreateTicketRequest request,
                                                   @AuthenticationPrincipal Jwt jwt) {
         Ticket ticket = new Ticket();
@@ -59,7 +64,7 @@ public class TicketController {
 
         Ticket saved = ticketRepository.save(ticket);
 
-        // Day 19: Temporary direct REST call to notification-service
+        // Day 27: Save to outbox table instead of direct REST call
         try {
             com.helpdesk.common.event.TicketCreatedEvent event = new com.helpdesk.common.event.TicketCreatedEvent(
                     UUID.randomUUID(),
@@ -69,14 +74,18 @@ public class TicketController {
                     saved.getCategory(),
                     saved.getRequesterId()
             );
-            restClient.post()
-                    .uri("/api/notifications/ticket-created")
-                    .body(event)
-                    .retrieve()
-                    .toBodilessEntity();
+            
+            String payload = objectMapper.writeValueAsString(event);
+            com.helpdesk.ticket.outbox.OutboxEvent outboxEvent = new com.helpdesk.ticket.outbox.OutboxEvent(
+                    event.eventId(),
+                    "Ticket",
+                    saved.getId().toString(),
+                    event.eventType(),
+                    payload
+            );
+            outboxRepository.save(outboxEvent);
         } catch (Exception e) {
-            // Ignore notification failure so we don't break ticket creation
-            System.err.println("Failed to notify notification-service: " + e.getMessage());
+            throw new RuntimeException("Failed to serialize event", e);
         }
 
         return ResponseEntity.created(URI.create("/api/tickets/" + saved.getId()))
