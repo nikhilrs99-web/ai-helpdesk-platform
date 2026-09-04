@@ -32,6 +32,7 @@ public class KnowledgeArticleController {
     }
 
     @GetMapping("/{id}")
+    @org.springframework.cache.annotation.Cacheable(value = "articles", key = "#id")
     public ArticleResponse getArticle(@PathVariable UUID id) {
         return repository.findById(id)
                 .map(ArticleResponse::new)
@@ -52,6 +53,7 @@ public class KnowledgeArticleController {
     }
 
     @PutMapping("/{id}")
+    @org.springframework.cache.annotation.CachePut(value = "articles", key = "#id")
     public ArticleResponse updateArticle(@PathVariable UUID id, @Valid @RequestBody ArticleRequest request) {
         KnowledgeArticle article = repository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Article not found"));
@@ -63,6 +65,7 @@ public class KnowledgeArticleController {
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @org.springframework.cache.annotation.CacheEvict(value = "articles", key = "#id")
     public void deleteArticle(@PathVariable UUID id) {
         if (!repository.existsById(id)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Article not found");
