@@ -1,0 +1,32 @@
+[
+  {
+    "query": "How do I reset my password?",
+    "expectedArticleId": "kb-101",
+    "expectedArticleTitle": "Password Reset Guide",
+    "expectedAnswerKeywords": ["login page", "forgot password", "email link"]
+  },
+  {
+    "query": "The billing page is showing a 500 error",
+    "expectedArticleId": "kb-102",
+    "expectedArticleTitle": "Known Issue: Billing Service Outage",
+    "expectedAnswerKeywords": ["outage", "engineering team", "status page"]
+  },
+  {
+    "query": "Can I upgrade my plan to Enterprise?",
+    "expectedArticleId": "kb-103",
+    "expectedArticleTitle": "Subscription Upgrade Options",
+    "expectedAnswerKeywords": ["billing dashboard", "contact sales", "enterprise tier"]
+  },
+  {
+    "query": "How do I invite a new user to my team?",
+    "expectedArticleId": "kb-104",
+    "expectedArticleTitle": "Team Management",
+    "expectedAnswerKeywords": ["settings", "team members", "invite button"]
+  },
+  {
+    "query": "Is there an API rate limit?",
+    "expectedArticleId": "kb-105",
+    "expectedArticleTitle": "API Documentation & Limits",
+    "expectedAnswerKeywords": ["1000 requests per minute", "HTTP 429", "headers"]
+  }
+]
