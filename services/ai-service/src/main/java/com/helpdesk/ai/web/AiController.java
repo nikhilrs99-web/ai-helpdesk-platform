@@ -70,8 +70,25 @@ public class AiController {
         String content = request.get("content");
         
         Document doc = new Document(content, Map.of("id", id, "title", title));
-        // Note: Spring AI handles generating the embedding via the configured EmbeddingModel
-        // and saving it to the VectorStore.
         vectorStore.accept(List.of(doc));
+    }
+
+    @PostMapping("/agent/chat")
+    public String agentChat(@RequestBody Map<String, String> request) {
+        String userMessage = request.getOrDefault("message", "Hello");
+        
+        // Day 56-58: Agent orchestration picks the right tool automatically
+        return chatClient.prompt()
+                .system("You are an autonomous support agent. Use the provided tools to fetch ticket details, SLA status, customer history, or search the KB. If a user asks to escalate, you MUST use the createEscalation tool and inform them it is pending human approval.")
+                .user(userMessage)
+                .functions(
+                        "getTicketStatus",
+                        "searchKnowledgeBase",
+                        "getSLAStatus",
+                        "getCustomerTickets",
+                        "createEscalation"
+                )
+                .call()
+                .content();
     }
 }
