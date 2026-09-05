@@ -4,6 +4,20 @@ server:
 spring:
   application:
     name: ai-service
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:5433/${POSTGRES_DB:helpdesk}
+    username: ${POSTGRES_USER:postgres}
+    password: ${POSTGRES_PASSWORD:postgres}
+  flyway:
+    enabled: true
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY:demo-key}
+    vectorstore:
+      pgvector:
+        index-type: HNSW
+        distance-type: COSINE_DISTANCE
+        dimensions: 1536
 
 management:
   endpoints:

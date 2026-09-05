@@ -8,7 +8,20 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "5433:5432"
-    volumes:
+    
+  ai-service:
+    build:
+      context: .
+      dockerfile: services/ai-service/Dockerfile
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./infrastructure/docker/postgres/init:/docker-entrypoint-initdb.d
     healthcheck:
@@ -26,7 +39,20 @@ services:
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
     ports:
       - "8080:8080"
-    volumes:
+    
+  ai-service:
+    build:
+      context: .
+      dockerfile: services/ai-service/Dockerfile
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+volumes:
       - ./infrastructure/docker/keycloak/realm-export:/opt/keycloak/data/import
 
   kafka:
@@ -99,5 +125,19 @@ services:
       context: .
       dockerfile: services/analytics-service/Dockerfile
 
+
+  ai-service:
+    build:
+      context: .
+      dockerfile: services/ai-service/Dockerfile
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
 volumes:
   postgres-data:
+
