@@ -27,9 +27,13 @@ public class AiController {
     public String hybridRagSearch(@RequestBody Map<String, String> request) {
         String query = request.getOrDefault("query", "");
 
-        // 1. Retrieve relevant context from pgvector
+        // Day 55: Tuned retrieval based on eval harness results.
+        // Increased TopK from 3 to 5 and added a similarity threshold of 0.75 
+        // to filter out low-quality matches before passing to the LLM.
         List<Document> similarDocuments = vectorStore.similaritySearch(
-                SearchRequest.query(query).withTopK(3)
+                SearchRequest.query(query)
+                        .withTopK(5)
+                        .withSimilarityThreshold(0.75)
         );
 
         String context = similarDocuments.stream()
