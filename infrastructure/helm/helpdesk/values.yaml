@@ -1,0 +1,98 @@
+global:
+  domain: helpdesk.local
+
+frontend:
+  replicaCount: 2
+  image:
+    repository: helpdesk/frontend
+    tag: latest
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+apiGateway:
+  replicaCount: 2
+  image:
+    repository: helpdesk/api-gateway
+    tag: latest
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+ticketService:
+  replicaCount: 2
+  image:
+    repository: helpdesk/ticket-service
+    tag: latest
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+aiService:
+  replicaCount: 1
+  image:
+    repository: helpdesk/ai-service
+    tag: latest
+  resources:
+    requests:
+      cpu: 500m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1024Mi
+  hpa:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 75
+
+kbService:
+  replicaCount: 1
+  image:
+    repository: helpdesk/kb-service
+    tag: latest
+
+notificationService:
+  replicaCount: 1
+  image:
+    repository: helpdesk/notification-service
+    tag: latest
+
+analyticsService:
+  replicaCount: 1
+  image:
+    repository: helpdesk/analytics-service
+    tag: latest
+
+# Subchart configurations
+postgresql:
+  auth:
+    postgresPassword: "postgres_password"
+    database: "helpdesk"
+
+kafka:
+  kraft:
+    enabled: true
+  zookeeper:
+    enabled: false
+
+redis:
+  auth:
+    enabled: false
+
+keycloak:
+  auth:
+    adminUser: admin
+    adminPassword: admin_password

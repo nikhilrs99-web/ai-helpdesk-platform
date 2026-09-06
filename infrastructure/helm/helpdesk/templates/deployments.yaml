@@ -1,0 +1,58 @@
+{{- range $name, $svc := dict "ticket-service" .Values.ticketService "api-gateway" .Values.apiGateway "ai-service" .Values.aiService "kb-service" .Values.kbService "notification-service" .Values.notificationService "analytics-service" .Values.analyticsService "frontend" .Values.frontend }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  labels:
+    app: {{ $name }}
+spec:
+  replicas: {{ $svc.replicaCount | default 1 }}
+  selector:
+    matchLabels:
+      app: {{ $name }}
+  template:
+    metadata:
+      labels:
+        app: {{ $name }}
+    spec:
+      containers:
+        - name: {{ $name }}
+          image: "{{ $svc.image.repository }}:{{ $svc.image.tag }}"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: {{ if eq $name "frontend" }}80{{ else if eq $name "api-gateway" }}8000{{ else }}8080{{ end }}
+          envFrom:
+            - configMapRef:
+                name: helpdesk-config
+            - secretRef:
+                name: helpdesk-secrets
+          {{- if $svc.resources }}
+          resources:
+{{ toYaml $svc.resources | indent 12 }}
+          {{- end }}
+          livenessProbe:
+            httpGet:
+              path: {{ if eq $name "frontend" }}/{{ else }}/actuator/health/liveness{{ end }}
+              port: {{ if eq $name "frontend" }}80{{ else if eq $name "api-gateway" }}8000{{ else }}8080{{ end }}
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: {{ if eq $name "frontend" }}/{{ else }}/actuator/health/readiness{{ end }}
+              port: {{ if eq $name "frontend" }}80{{ else if eq $name "api-gateway" }}8000{{ else }}8080{{ end }}
+            initialDelaySeconds: 15
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+spec:
+  selector:
+    app: {{ $name }}
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: {{ if eq $name "frontend" }}80{{ else if eq $name "api-gateway" }}8000{{ else }}8080{{ end }}
+{{- end }}

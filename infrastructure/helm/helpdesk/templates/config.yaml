@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: helpdesk-config
+data:
+  POSTGRES_HOST: "helpdesk-platform-postgresql"
+  POSTGRES_DB: "helpdesk"
+  KAFKA_BOOTSTRAP_SERVERS: "helpdesk-platform-kafka:9092"
+  REDIS_HOST: "helpdesk-platform-redis-master"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: helpdesk-secrets
+type: Opaque
+stringData:
+  POSTGRES_USER: "postgres"
+  POSTGRES_PASSWORD: "postgres_password"
+  OPENAI_API_KEY: "sk-your-openai-key-here"
