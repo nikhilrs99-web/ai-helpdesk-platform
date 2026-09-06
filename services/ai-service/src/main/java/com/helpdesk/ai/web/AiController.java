@@ -6,6 +6,7 @@ import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.web.bind.annotation.*;
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 
 import java.util.List;
 import java.util.Map;
@@ -24,6 +25,7 @@ public class AiController {
     }
 
     @PostMapping("/rag/search")
+    @WithSpan("rag-pipeline-execution")
     public String hybridRagSearch(@RequestBody Map<String, String> request) {
         String query = request.getOrDefault("query", "");
 

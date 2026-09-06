@@ -49,6 +49,11 @@
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-database-postgresql</artifactId>
         </dependency>
+            <dependency>
+            <groupId>io.opentelemetry.instrumentation</groupId>
+            <artifactId>opentelemetry-spring-boot-starter</artifactId>
+            <version>2.0.0-alpha</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -60,3 +65,5 @@
         </plugins>
     </build>
 </project>
+
+
