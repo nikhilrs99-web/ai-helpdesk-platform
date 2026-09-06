@@ -15,10 +15,17 @@ management:
       show-details: always
 
 
+    datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:5433/${POSTGRES_DB:helpdesk}
+    username: ${POSTGRES_USER:postgres}
+    password: ${POSTGRES_PASSWORD:postgres}
+  flyway:
+    enabled: true
   kafka:
     bootstrap-servers: localhost:9092
     consumer:
       group-id: analytics-group
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
 
