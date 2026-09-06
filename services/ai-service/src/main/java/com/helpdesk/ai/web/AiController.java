@@ -33,13 +33,15 @@ public class AiController {
         // Increased TopK from 3 to 5 and added a similarity threshold of 0.75 
         // to filter out low-quality matches before passing to the LLM.
         List<Document> similarDocuments = vectorStore.similaritySearch(
-                SearchRequest.query(query)
-                        .withTopK(5)
-                        .withSimilarityThreshold(0.75)
+                SearchRequest.builder()
+                        .query(query)
+                        .topK(5)
+                        .similarityThreshold(0.75)
+                        .build()
         );
 
         String context = similarDocuments.stream()
-                .map(Document::getContent)
+                .map(Document::getText)
                 .collect(Collectors.joining("\n\n"));
 
         // 2. Generate response using LLM (RAG pattern)
@@ -72,7 +74,7 @@ public class AiController {
         String content = request.get("content");
         
         Document doc = new Document(content, Map.of("id", id, "title", title));
-        vectorStore.accept(List.of(doc));
+        vectorStore.add(List.of(doc));
     }
 
     @PostMapping("/agent/chat")
@@ -83,7 +85,7 @@ public class AiController {
         return chatClient.prompt()
                 .system("You are an autonomous support agent. Use the provided tools to fetch ticket details, SLA status, customer history, or search the KB. If a user asks to escalate, you MUST use the createEscalation tool and inform them it is pending human approval.")
                 .user(userMessage)
-                .functions(
+                .toolNames(
                         "getTicketStatus",
                         "searchKnowledgeBase",
                         "getSLAStatus",

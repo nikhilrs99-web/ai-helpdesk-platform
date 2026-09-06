@@ -5,11 +5,17 @@ spring:
   application:
     name: ai-service
   datasource:
-    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:5433/${POSTGRES_DB:helpdesk}
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5433}/${POSTGRES_DB:helpdesk}
     username: ${POSTGRES_USER:postgres}
     password: ${POSTGRES_PASSWORD:postgres}
   flyway:
+    # Shares the "helpdesk" database/public schema with the other services - a dedicated table
+    # and a baseline below the real V1 migration keeps this service's history independent and
+    # ensures V1 actually runs instead of being skipped as already-baselined.
     enabled: true
+    table: flyway_schema_history_ai
+    baseline-on-migrate: true
+    baseline-version: 0
   ai:
     openai:
       api-key: ${OPENAI_API_KEY:demo-key}

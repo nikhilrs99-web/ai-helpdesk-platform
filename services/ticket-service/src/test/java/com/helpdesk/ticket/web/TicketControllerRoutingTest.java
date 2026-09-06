@@ -39,7 +39,13 @@ class TicketControllerRoutingTest {
         RoutingStrategy fakeStrategy = ticket -> "quality-assurance";
         TicketTypeHandlerFactory typeHandlerFactory = new TicketTypeHandlerFactory(
                 List.of(new BugTicketHandler(), new BillingTicketHandler(), new DefaultTicketTypeHandler()));
-        TicketController controller = new TicketController(repository, fakeStrategy, typeHandlerFactory);
+        com.helpdesk.ticket.outbox.OutboxRepository outboxRepository = mock(com.helpdesk.ticket.outbox.OutboxRepository.class);
+        com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper()
+                .registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
+        com.helpdesk.ticket.redis.RateLimiterService rateLimiterService = mock(com.helpdesk.ticket.redis.RateLimiterService.class);
+        when(rateLimiterService.isAllowed(any())).thenReturn(true);
+        TicketController controller = new TicketController(repository, fakeStrategy, typeHandlerFactory,
+                outboxRepository, objectMapper, rateLimiterService);
 
         CreateTicketRequest request = new CreateTicketRequest(
                 "Crashes on save", "Stack trace attached", TicketCategory.BUG,

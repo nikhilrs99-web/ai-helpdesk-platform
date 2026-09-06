@@ -16,7 +16,7 @@
     <description>Spring Cloud Gateway for routing and centralized JWT validation</description>
 
     <properties>
-        <spring-cloud.version>2023.0.0</spring-cloud.version>
+        <spring-cloud.version>2023.0.3</spring-cloud.version>
     </properties>
 
     <dependencyManagement>

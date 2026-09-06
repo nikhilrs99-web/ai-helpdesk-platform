@@ -34,7 +34,7 @@ class RagEvaluationTest {
         // Expected Article ID: "kb-101"
         
         List<Document> results = vectorStore.similaritySearch(
-                SearchRequest.query("How do I reset my password?").withTopK(3)
+                SearchRequest.builder().query("How do I reset my password?").topK(3).build()
         );
 
         // Check if the expected document is in the top 3 results (Precision@3)

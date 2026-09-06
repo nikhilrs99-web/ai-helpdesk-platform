@@ -10,7 +10,7 @@ spring:
         jwt:
           issuer-uri: http://localhost:8080/realms/helpdesk
   datasource:
-    url: jdbc:postgresql://localhost:5433/${POSTGRES_DB:helpdesk}
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5433}/${POSTGRES_DB:helpdesk}
     username: ${POSTGRES_USER:helpdesk_app}
     password: ${POSTGRES_PASSWORD:localdevpassword123}
   flyway:
@@ -32,6 +32,11 @@ spring:
     properties:
       hibernate:
         format_sql: true
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
 
 management:
   endpoints:
@@ -48,9 +53,3 @@ logging:
     # values bound to each ? and the values Hibernate reads back out of the ResultSet.
     org.hibernate.orm.jdbc.bind: TRACE
     org.hibernate.orm.jdbc.extract: TRACE
-
-  kafka:
-    bootstrap-servers: localhost:9092
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.apache.kafka.common.serialization.StringSerializer

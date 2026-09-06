@@ -5,12 +5,18 @@ spring:
   application:
     name: kb-service
   datasource:
-    url: jdbc:postgresql://localhost:5433/${POSTGRES_DB:helpdesk}
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5433}/${POSTGRES_DB:helpdesk}
     username: ${POSTGRES_USER:helpdesk_app}
     password: ${POSTGRES_PASSWORD:localdevpassword123}
   flyway:
+    # This service's tables live in the same shared "helpdesk" database/public schema as the
+    # other services, each with its own migration timeline - a dedicated table name keeps
+    # kb-service's Flyway history from colliding with ticket-service's. baseline-version: 0
+    # (not 1) so V1 still actually runs and creates this service's tables, since the shared
+    # public schema is already non-empty (has ticket-service's tables) by the time this runs.
+    table: flyway_schema_history_kb
     baseline-on-migrate: true
-    baseline-version: 1
+    baseline-version: 0
     locations: classpath:db/migration
   jpa:
     open-in-view: false
