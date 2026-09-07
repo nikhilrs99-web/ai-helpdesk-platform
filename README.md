@@ -3,7 +3,7 @@
 A RAG-based support desk built as event-driven microservices — a portfolio project demonstrating Spring Boot, Kafka, Redis, Spring AI, Kubernetes, and AWS end to end. AI is a feature inside a strong backend system, not the whole project: ticket classification, retrieval-augmented draft replies, and an agentic tool-calling assistant sit on top of a properly modeled ticket lifecycle, transactional-outbox event publishing, and full observability.
 
 ## Status
-In active development — built incrementally, one day at a time. See the Build Log below.
+Fully Completed (v1.0.0-RELEASE) — The 100-Day Build Plan was successfully executed in full. See the Build Log below for the phase-by-phase breakdown.
 
 ## Repository layout
 ```
@@ -53,3 +53,4 @@ See [docs/architecture/design-patterns.md](docs/architecture/design-patterns.md)
 | Phase 11: Observability | Added `opentelemetry-spring-boot-starter` (OTel) to all Java microservices for automatic distributed tracing. Integrated Grafana, Prometheus, and Tempo into docker-compose for metrics and trace storage via OTLP. Configured Prometheus scraping rules and documented the Trace-to-Log correlation architecture. |
 | Phase 12: Terraform & AWS | Wrote Infrastructure-as-Code modules for a production AWS deployment. Provisioned a 3-AZ VPC, an EKS cluster, managed RDS PostgreSQL (pgvector-enabled), ElastiCache Redis, and ECR repositories. Configured remote S3/DynamoDB state backend and documented the deployment/teardown process. |
 | Phase 13: CI/CD & GitOps | Built a GitHub Actions pipeline featuring Maven tests, OWASP Dependency-Check, SonarQube SAST, Docker builds, and Trivy image scanning. Configured Argo CD for GitOps deployments directly to EKS. Documented OWASP ZAP dynamic baseline scan results. |
+| Phase 14: Security Hardening & Final Polish | Migrated plaintext credentials to AWS Secrets Manager using External Secrets Operator. Documented system architecture, database design, and end-to-end performance metrics. Bumped version to `1.0.0-RELEASE`. Executed `terraform destroy` to cleanly tear down AWS infrastructure. |
