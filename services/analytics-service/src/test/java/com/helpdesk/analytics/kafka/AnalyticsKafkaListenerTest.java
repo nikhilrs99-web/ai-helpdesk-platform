@@ -1,10 +1,14 @@
 package com.helpdesk.analytics.kafka;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.helpdesk.analytics.domain.TicketMetric;
 import com.helpdesk.analytics.domain.TicketMetricRepository;
+import com.helpdesk.common.enums.TicketCategory;
+import com.helpdesk.common.event.TicketCreatedEvent;
 import org.junit.jupiter.api.Test;
 
+import java.time.Instant;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -45,6 +49,32 @@ class AnalyticsKafkaListenerTest {
         assertThat(saved.getCategory()).isEqualTo("BUG");
         assertThat(saved.getStatus()).isEqualTo("OPEN");
         assertThat(saved.isSlaBreached()).isFalse();
+    }
+
+    @Test
+    void handlesARealTicketCreatedEventAsActuallyPublishedByTicketService() throws Exception {
+        // The other tests above hand-write JSON with "eventType" already in it, which would
+        // have stayed green even while eventType() was silently missing from the real
+        // TicketController -> OutboxWorker -> Kafka payload (a real bug this test would have
+        // caught immediately). This one goes through the same ObjectMapper.writeValueAsString
+        // call the producer actually uses, so it fails the moment that wire format regresses.
+        ObjectMapper realObjectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
+        UUID ticketId = UUID.randomUUID();
+        TicketCreatedEvent event = new TicketCreatedEvent(UUID.randomUUID(),
+                TicketCreatedEvent.CURRENT_VERSION, Instant.now(), ticketId,
+                TicketCategory.BUG, "requester-1");
+        String payload = realObjectMapper.writeValueAsString(event);
+
+        TicketMetricRepository repository = mock(TicketMetricRepository.class);
+        when(repository.findByTicketId(ticketId)).thenReturn(null);
+        AnalyticsKafkaListener listener = new AnalyticsKafkaListener(repository, realObjectMapper);
+
+        listener.handleEvent(payload);
+
+        org.mockito.ArgumentCaptor<TicketMetric> captor = org.mockito.ArgumentCaptor.forClass(TicketMetric.class);
+        verify(repository).save(captor.capture());
+        assertThat(captor.getValue().getCategory()).isEqualTo("BUG");
+        assertThat(captor.getValue().getStatus()).isEqualTo("OPEN");
     }
 
     @Test
