@@ -57,6 +57,12 @@ class TicketControllerSecurityTest {
     @MockBean
     private TicketTypeHandlerFactory typeHandlerFactory;
 
+    @MockBean
+    private com.helpdesk.ticket.outbox.OutboxRepository outboxRepository;
+
+    @MockBean
+    private com.helpdesk.ticket.redis.RateLimiterService rateLimiterService;
+
     // Stops OAuth2ResourceServerAutoConfiguration from resolving a real JwtDecoder against the
     // configured Keycloak issuer-uri during context startup - SecurityMockMvcRequestPostProcessors
     // .jwt() injects a pre-authenticated principal directly and never decodes a real token.

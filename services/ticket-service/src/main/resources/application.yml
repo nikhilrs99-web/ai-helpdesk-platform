@@ -8,11 +8,20 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: http://localhost:8080/realms/helpdesk
+          # issuer-uri is only compared against the token's `iss` claim, which Keycloak stamps
+          # with whatever host the browser used (localhost:8080) - it must match exactly.
+          # jwk-set-uri is the actual network call this container makes to fetch signing keys,
+          # which needs Docker's internal service DNS since "localhost" here means this container.
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8080/realms/helpdesk}
+          jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://localhost:8080/realms/helpdesk/protocol/openid-connect/certs}
   datasource:
     url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5433}/${POSTGRES_DB:helpdesk}
     username: ${POSTGRES_USER:helpdesk_app}
     password: ${POSTGRES_PASSWORD:localdevpassword123}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
   flyway:
     # This app's tables already existed (created by ddl-auto: update through Day 15) before
     # Flyway was introduced - baseline-on-migrate marks whatever's already there as V1 instead
@@ -42,7 +51,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,prometheus
   endpoint:
     health:
       show-details: always

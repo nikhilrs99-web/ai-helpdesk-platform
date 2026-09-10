@@ -34,7 +34,15 @@ class TicketControllerRoutingTest {
     @Test
     void usesWhicheverRoutingStrategyIsInjected() {
         TicketRepository repository = mock(TicketRepository.class);
-        when(repository.save(any(Ticket.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        // A real JPA save() assigns the generated id; TicketController now needs ticket.getId()
+        // to write the outbox event, so the mock has to reproduce that or NPE on a fresh Ticket.
+        when(repository.save(any(Ticket.class))).thenAnswer(invocation -> {
+            Ticket saved = invocation.getArgument(0);
+            java.lang.reflect.Field idField = com.helpdesk.ticket.domain.BaseEntity.class.getDeclaredField("id");
+            idField.setAccessible(true);
+            idField.set(saved, java.util.UUID.randomUUID());
+            return saved;
+        });
 
         RoutingStrategy fakeStrategy = ticket -> "quality-assurance";
         TicketTypeHandlerFactory typeHandlerFactory = new TicketTypeHandlerFactory(

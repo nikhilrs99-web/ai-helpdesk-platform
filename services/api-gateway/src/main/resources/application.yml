@@ -8,36 +8,41 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: http://localhost:8080/realms/helpdesk
+          # issuer-uri is only compared against the token's `iss` claim, which Keycloak stamps
+          # with whatever host the browser used (localhost:8080) - it must match exactly.
+          # jwk-set-uri is the actual network call this container makes to fetch signing keys,
+          # which needs Docker's internal service DNS since "localhost" here means this container.
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8080/realms/helpdesk}
+          jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://localhost:8080/realms/helpdesk/protocol/openid-connect/certs}
   cloud:
     gateway:
       routes:
         - id: ticket-service
-          uri: http://localhost:8081
+          uri: http://ticket-service:8081
           predicates:
             - Path=/api/tickets/**
         - id: kb-service
-          uri: http://localhost:8082
+          uri: http://kb-service:8082
           predicates:
             - Path=/api/articles/**
         - id: notification-service
-          uri: http://localhost:8084
+          uri: http://notification-service:8084
           predicates:
             - Path=/api/notifications/**
 
         - id: ai-service
-          uri: http://localhost:8083
+          uri: http://ai-service:8083
           predicates:
             - Path=/api/ai/**
         - id: analytics-service
-          uri: http://localhost:8085
+          uri: http://analytics-service:8085
           predicates:
             - Path=/api/analytics/**
 management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,prometheus
   endpoint:
     health:
       show-details: always

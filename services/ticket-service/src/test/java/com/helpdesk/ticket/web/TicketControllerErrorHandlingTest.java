@@ -10,6 +10,7 @@ import com.helpdesk.ticket.tickettype.BillingTicketHandler;
 import com.helpdesk.ticket.tickettype.BugTicketHandler;
 import com.helpdesk.ticket.tickettype.DefaultTicketTypeHandler;
 import com.helpdesk.ticket.tickettype.TicketTypeHandlerFactory;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -55,6 +56,20 @@ class TicketControllerErrorHandlingTest {
 
     @MockBean
     private RoutingStrategy routingStrategy;
+
+    @MockBean
+    private com.helpdesk.ticket.outbox.OutboxRepository outboxRepository;
+
+    @MockBean
+    private com.helpdesk.ticket.redis.RateLimiterService rateLimiterService;
+
+    // A bare @MockBean returns false for isAllowed(), which would 429 every request in this
+    // class before the status-mapping logic under test ever runs - these tests aren't about
+    // rate limiting, so keep it out of the way.
+    @BeforeEach
+    void allowAllRequests() {
+        when(rateLimiterService.isAllowed(org.mockito.ArgumentMatchers.any())).thenReturn(true);
+    }
 
     // Stops OAuth2ResourceServerAutoConfiguration from resolving a real JwtDecoder against the
     // configured Keycloak issuer-uri during context startup - see TicketControllerSecurityTest.
