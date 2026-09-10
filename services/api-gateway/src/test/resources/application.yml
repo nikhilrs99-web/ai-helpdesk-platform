@@ -1,0 +1,30 @@
+server:
+  port: 0
+
+spring:
+  application:
+    name: api-gateway
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # Never actually reached - GatewaySecurityAndRoutingTest replaces the decoder bean
+          # with a @MockBean, but OAuth2ResourceServerAutoConfiguration still needs some
+          # value here to build its context at startup.
+          issuer-uri: http://localhost:8080/realms/helpdesk
+          jwk-set-uri: http://localhost:8080/realms/helpdesk/protocol/openid-connect/certs
+  cloud:
+    gateway:
+      routes:
+        - id: ticket-service
+          # Fixed port so this file (loaded from the classpath, before the JVM starts)
+          # doesn't need to know the stub server's port in advance - the test starts its
+          # stub JDK HttpServer bound to this exact port before the Spring context loads.
+          uri: http://localhost:18089
+          predicates:
+            - Path=/api/tickets/**
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
