@@ -6,6 +6,7 @@ frontend:
   image:
     repository: helpdesk/frontend
     tag: latest
+  port: 80
   resources:
     requests:
       cpu: 100m
@@ -19,6 +20,8 @@ apiGateway:
   image:
     repository: helpdesk/api-gateway
     tag: latest
+  # Matches server.port in services/api-gateway/src/main/resources/application.yml.
+  port: 8000
   resources:
     requests:
       cpu: 200m
@@ -32,6 +35,10 @@ ticketService:
   image:
     repository: helpdesk/ticket-service
     tag: latest
+  # Matches server.port in services/ticket-service/src/main/resources/application.yml.
+  # These are all different (and none of them is 8080) because each service keeps its own
+  # port for local, non-Docker development - see docs/architecture for the full port map.
+  port: 8081
   resources:
     requests:
       cpu: 200m
@@ -45,6 +52,8 @@ aiService:
   image:
     repository: helpdesk/ai-service
     tag: latest
+  # Matches server.port in services/ai-service/src/main/resources/application.yml.
+  port: 8083
   resources:
     requests:
       cpu: 500m
@@ -63,36 +72,125 @@ kbService:
   image:
     repository: helpdesk/kb-service
     tag: latest
+  # Matches server.port in services/kb-service/src/main/resources/application.yml.
+  port: 8082
 
 notificationService:
   replicaCount: 1
   image:
     repository: helpdesk/notification-service
     tag: latest
+  # Matches server.port in services/notification-service/src/main/resources/application.yml.
+  port: 8084
 
 analyticsService:
   replicaCount: 1
   image:
     repository: helpdesk/analytics-service
     tag: latest
+  # Matches server.port in services/analytics-service/src/main/resources/application.yml.
+  port: 8085
+
+# Secrets rendered into the helpdesk-secrets Kubernetes Secret by templates/config.yaml.
+# These are placeholders for local/dev use only - override with -f a separate, untracked
+# values-secrets.yaml or --set on the helm command line for anything real. A Kubernetes
+# Secret is base64, not encrypted, so this is still not where production credentials belong
+# long-term (see docs/architecture for moving to Vault / External Secrets Operator).
+secrets:
+  openaiApiKey: "sk-your-openai-key-here"
 
 # Subchart configurations
+# KNOWN GAP: this is the stock Bitnami postgresql image, which does not include the
+# pgvector extension. ai-service's own Flyway migration (V1__init_vector_store.sql) runs
+# `CREATE EXTENSION vector` and will fail to start against this database - unlike
+# docker-compose, which uses the pgvector/pgvector:pg16 image specifically for this reason.
+# Fixing this needs a custom image (Bitnami postgresql base with pgvector compiled in, since
+# swapping to pgvector/pgvector directly breaks the chart's Bitnami-specific entrypoint
+# scripts) pushed to a registry this cluster can pull from - deliberately out of scope here.
+# Every other service (ticket, kb, notification, analytics, api-gateway, Keycloak) works
+# fine against this database.
 postgresql:
+  # Bitnami moved every pre-existing pinned/versioned tag off the free docker.io/bitnami
+  # namespace in 2025 (only :latest stays free there, and not even that for every chart -
+  # kafka and keycloak have no :latest on docker.io/bitnami at all anymore). Confirmed
+  # against a live cluster: without this override every one of these pods sits in
+  # ImagePullBackOff ("not found"). docker.io/bitnamilegacy is Bitnami's own free mirror of
+  # the exact same pinned tags for migration - this keeps the chart's tested version pins
+  # instead of jumping to whatever :latest happens to be today.
+  image:
+    repository: bitnamilegacy/postgresql
   auth:
     postgresPassword: "postgres_password"
     database: "helpdesk"
 
 kafka:
+  image:
+    repository: bitnamilegacy/kafka
   kraft:
     enabled: true
   zookeeper:
     enabled: false
+  # Confirmed on a live single-node cluster: the default 3-controller KRaft quorum kept
+  # crash-looping under CPU/memory contention from everything else running at once (7
+  # microservices, Postgres, Redis, Keycloak) - each controller's liveness probe kept
+  # killing it before quorum election finished, which then reset the others' progress too.
+  # 1 controller has nothing to elect against and starts reliably. Bump this back up for an
+  # actual multi-node production cluster where you want real HA.
+  controller:
+    replicaCount: 1
+    # Same class of bug as our own services' probes (see deployments.yaml): the chart's
+    # default livenessProbe.initialDelaySeconds (10s) is too short for KRaft storage
+    # formatting + JVM boot on a resource-constrained node - confirmed live, it keeps
+    # killing the controller mid-startup ("Terminating process due to signal SIGTERM"
+    # right after "Starting controller"), which looks like a crash but is Kubernetes
+    # doing it. The chart ships a startupProbe for exactly this but it defaults to
+    # disabled.
+    startupProbe:
+      enabled: true
+      failureThreshold: 30
 
 redis:
+  image:
+    repository: bitnamilegacy/redis
   auth:
     enabled: false
 
 keycloak:
+  # See the note on the top-level postgresql.image above - same fix, and keycloak has no
+  # :latest at all on the free docker.io/bitnami namespace, only the exact pinned tag on
+  # docker.io/bitnamilegacy.
+  image:
+    repository: bitnamilegacy/keycloak
   auth:
     adminUser: admin
     adminPassword: admin_password
+  # Bitnami's keycloak chart bundles its own postgresql sub-dependency, enabled by default.
+  # Since our own top-level `postgresql:` block above is ALSO an un-aliased dependency named
+  # "postgresql", both render a StatefulSet/Service/Secret named "<release>-postgresql" -
+  # an exact collision (confirmed with `helm template`: both objects exist, identically
+  # named, with different specs - whichever happens to apply last silently wins). Disabling
+  # keycloak's bundled copy and pointing it at the shared instance via externalDatabase
+  # avoids the collision and a redundant 7th Postgres pod.
+  postgresql:
+    enabled: false
+  externalDatabase:
+    # Must match the release name postgresql's own chart resolves to ("<release>-postgresql")
+    # - values.yaml isn't Helm-templated, so this can't reference .Release.Name directly.
+    host: "helpdesk-platform-postgresql"
+    port: 5432
+    user: postgres
+    database: helpdesk
+    existingSecret: "helpdesk-platform-postgresql"
+    existingSecretPasswordKey: postgres-password
+  # values.yaml isn't Helm-templated, so this can't reference global.domain directly - it
+  # must be kept in sync with it by hand. Without KC_HOSTNAME, Keycloak's production mode
+  # (unlike docker-compose's start-dev) requires an explicit hostname or refuses to start;
+  # KC_PROXY=edge tells it it's sitting behind the nginx Ingress terminating/forwarding
+  # requests, which affects how it builds redirect URLs.
+  extraEnvVars:
+    - name: KC_HOSTNAME
+      value: "helpdesk.local"
+    - name: KC_HOSTNAME_STRICT
+      value: "false"
+    - name: KC_PROXY
+      value: "edge"

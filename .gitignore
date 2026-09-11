@@ -35,3 +35,7 @@ build/
 
 # Personal build log (local reference only, never pushed)
 Build Log/
+
+# Helm chart dependencies - downloaded build artifacts, not source. Chart.lock pins the
+# exact versions; `helm dependency update` re-fetches these from Chart.lock on demand.
+infrastructure/helm/*/charts/*.tgz

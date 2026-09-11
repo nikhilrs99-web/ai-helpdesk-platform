@@ -21,7 +21,7 @@ spec:
           image: "{{ $svc.image.repository }}:{{ $svc.image.tag }}"
           imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: {{ if eq $name "frontend" }}80{{ else if eq $name "api-gateway" }}8000{{ else }}8080{{ end }}
+            - containerPort: {{ $svc.port }}
           envFrom:
             - configMapRef:
                 name: helpdesk-config
@@ -31,28 +31,45 @@ spec:
           resources:
 {{ toYaml $svc.resources | indent 12 }}
           {{- end }}
+          {{- /* The frontend is static nginx with no Spring actuator, so it has no
+                 liveness/readiness health groups - just prove it's serving something. */}}
+          {{- /* Confirmed against a live cluster: these are JVM services doing Flyway
+                 migrations against a cold-started Postgres, and can take 60-150+ seconds to
+                 come up (observed directly in docker-compose logs - ticket-service alone
+                 took over 150s once). A 30s initialDelaySeconds on the liveness probe was
+                 killing every one of them mid-startup, before Spring Boot ever opened a
+                 port - an endless CrashLoopBackOff that looks like an app bug but isn't.
+                 A startupProbe holds off liveness/readiness until the app is actually up,
+                 with its own generous budget (periodSeconds * failureThreshold = 5 minutes),
+                 then normal fast-interval checks take over for genuine health monitoring. */}}
+          startupProbe:
+            httpGet:
+              path: {{ if eq $name "frontend" }}/{{ else }}/actuator/health/readiness{{ end }}
+              port: {{ $svc.port }}
+            periodSeconds: 5
+            failureThreshold: 60
           livenessProbe:
             httpGet:
               path: {{ if eq $name "frontend" }}/{{ else }}/actuator/health/liveness{{ end }}
-              port: {{ if eq $name "frontend" }}80{{ else if eq $name "api-gateway" }}8000{{ else }}8080{{ end }}
-            initialDelaySeconds: 30
+              port: {{ $svc.port }}
             periodSeconds: 10
           readinessProbe:
             httpGet:
               path: {{ if eq $name "frontend" }}/{{ else }}/actuator/health/readiness{{ end }}
-              port: {{ if eq $name "frontend" }}80{{ else if eq $name "api-gateway" }}8000{{ else }}8080{{ end }}
-            initialDelaySeconds: 15
+              port: {{ $svc.port }}
             periodSeconds: 10
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: {{ $name }}
+  labels:
+    app: {{ $name }}
 spec:
   selector:
     app: {{ $name }}
   ports:
     - protocol: TCP
       port: 80
-      targetPort: {{ if eq $name "frontend" }}80{{ else if eq $name "api-gateway" }}8000{{ else }}8080{{ end }}
+      targetPort: {{ $svc.port }}
 {{- end }}

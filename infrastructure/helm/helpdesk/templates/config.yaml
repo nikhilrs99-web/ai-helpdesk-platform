@@ -3,10 +3,29 @@ kind: ConfigMap
 metadata:
   name: helpdesk-config
 data:
-  POSTGRES_HOST: "helpdesk-platform-postgresql"
-  POSTGRES_DB: "helpdesk"
-  KAFKA_BOOTSTRAP_SERVERS: "helpdesk-platform-kafka:9092"
-  REDIS_HOST: "helpdesk-platform-redis-master"
+  # Bitnami subcharts name their Services "<release-name>-<chart-name>[-role]" - hardcoding
+  # a release name here would break any install that isn't literally named
+  # "helm install helpdesk-platform ...".
+  POSTGRES_HOST: "{{ .Release.Name }}-postgresql"
+  POSTGRES_DB: {{ .Values.postgresql.auth.database | quote }}
+  KAFKA_BOOTSTRAP_SERVERS: "{{ .Release.Name }}-kafka:9092"
+  REDIS_HOST: "{{ .Release.Name }}-redis-master"
+  # Same split as docker-compose's fix: issuer-uri is compared against the token's `iss`
+  # claim, which Keycloak stamps with the host a browser used (the Ingress host, since
+  # that's how a user's browser reaches Keycloak's login/token endpoints) - it must match
+  # exactly. jwk-set-uri is the actual network call a pod makes to fetch signing keys, which
+  # can and should use the in-cluster Service DNS name instead of round-tripping through the
+  # Ingress. KC_HOSTNAME below (keycloak subchart config in values.yaml) must be kept in
+  # sync with global.domain for the issuer Keycloak actually stamps to match this.
+  KEYCLOAK_ISSUER_URI: "http://{{ .Values.global.domain }}/realms/helpdesk"
+  KEYCLOAK_JWK_SET_URI: "http://{{ .Release.Name }}-keycloak/realms/helpdesk/protocol/openid-connect/certs"
+  # Confirmed on a live cluster: 4 services each opening HikariCP's default pool of 10
+  # connections simultaneously at startup (up to 40 at once) against a single Postgres pod
+  # caused repeated connection timeouts and CrashLoopBackOff, even though a single direct
+  # psql connection tested fine in isolation - this is connection-establishment contention
+  # (Postgres forks one backend process per connection), not a broken app or chart. A small
+  # per-service pool is plenty for these services' actual traffic and spreads startup load.
+  SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: "3"
 ---
 apiVersion: v1
 kind: Secret
@@ -14,6 +33,11 @@ metadata:
   name: helpdesk-secrets
 type: Opaque
 stringData:
-  POSTGRES_USER: "postgres"
-  POSTGRES_PASSWORD: "postgres_password"
-  OPENAI_API_KEY: "sk-your-openai-key-here"
+  # Real values come from values.yaml (or -f a separate, untracked values-secrets.yaml, or
+  # --set on the helm command line) - never hardcode real credentials into a chart template
+  # that gets committed to git. See values.yaml's `secrets:` block for what to override, and
+  # docs/architecture for the plan to move this to a real secrets manager (Vault / External
+  # Secrets Operator) instead of plain Kubernetes Secrets.
+  POSTGRES_USER: {{ .Values.postgresql.auth.username | default "postgres" | quote }}
+  POSTGRES_PASSWORD: {{ .Values.postgresql.auth.postgresPassword | quote }}
+  OPENAI_API_KEY: {{ .Values.secrets.openaiApiKey | quote }}
