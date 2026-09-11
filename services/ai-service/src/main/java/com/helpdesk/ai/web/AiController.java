@@ -5,6 +5,7 @@ import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
 
@@ -68,6 +69,7 @@ public class AiController {
     }
 
     @PostMapping("/ingest")
+    @PreAuthorize("hasAnyRole('agent','admin')")
     public void ingestArticle(@RequestBody Map<String, String> request) {
         String id = request.get("id");
         String title = request.get("title");

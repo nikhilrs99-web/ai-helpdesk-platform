@@ -4,6 +4,16 @@ server:
 spring:
   application:
     name: kb-service
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # issuer-uri is only compared against the token's `iss` claim, which Keycloak stamps
+          # with whatever host the browser used (localhost:8080) - it must match exactly.
+          # jwk-set-uri is the actual network call this container makes to fetch signing keys,
+          # which needs Docker's internal service DNS since "localhost" here means this container.
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8080/realms/helpdesk}
+          jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://localhost:8080/realms/helpdesk/protocol/openid-connect/certs}
   datasource:
     url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5433}/${POSTGRES_DB:helpdesk}
     username: ${POSTGRES_USER:helpdesk_app}

@@ -105,11 +105,15 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      KEYCLOAK_ISSUER_URI: http://localhost:8080/realms/helpdesk
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/helpdesk/protocol/openid-connect/certs
       OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo:4318
       OTEL_METRICS_EXPORTER: none
     depends_on:
       postgres:
         condition: service_healthy
+      keycloak:
+        condition: service_started
 
   notification-service:
     build:
@@ -134,12 +138,16 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      KEYCLOAK_ISSUER_URI: http://localhost:8080/realms/helpdesk
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/helpdesk/protocol/openid-connect/certs
       OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo:4318
       OTEL_METRICS_EXPORTER: none
     depends_on:
       postgres:
         condition: service_healthy
       kafka:
+        condition: service_started
+      keycloak:
         condition: service_started
 
   ai-service:
@@ -153,11 +161,15 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
+      KEYCLOAK_ISSUER_URI: http://localhost:8080/realms/helpdesk
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/helpdesk/protocol/openid-connect/certs
       OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo:4318
       OTEL_METRICS_EXPORTER: none
     depends_on:
       postgres:
         condition: service_healthy
+      keycloak:
+        condition: service_started
 
   frontend:
     build:

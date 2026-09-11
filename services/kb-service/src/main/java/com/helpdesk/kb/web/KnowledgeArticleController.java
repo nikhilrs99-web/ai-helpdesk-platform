@@ -9,6 +9,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -25,6 +26,7 @@ public class KnowledgeArticleController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('agent','admin')")
     @ResponseStatus(HttpStatus.CREATED)
     public ArticleResponse createArticle(@Valid @RequestBody ArticleRequest request) {
         KnowledgeArticle article = new KnowledgeArticle(request.getTitle(), request.getBody(), request.getCategory());
@@ -53,6 +55,7 @@ public class KnowledgeArticleController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('agent','admin')")
     @org.springframework.cache.annotation.CachePut(value = "articles", key = "#id")
     public ArticleResponse updateArticle(@PathVariable UUID id, @Valid @RequestBody ArticleRequest request) {
         KnowledgeArticle article = repository.findById(id)
@@ -64,6 +67,7 @@ public class KnowledgeArticleController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('agent','admin')")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @org.springframework.cache.annotation.CacheEvict(value = "articles", key = "#id")
     public void deleteArticle(@PathVariable UUID id) {
