@@ -13,7 +13,7 @@ COPY common/src common/src
 COPY services/api-gateway/src services/api-gateway/src
 RUN mvn clean package -pl services/api-gateway -am -DskipTests
 
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:25-jre-alpine
 WORKDIR /app
 # Run as an unprivileged, non-login user - the base image runs as root by default, and this
 # process never needs to be root (it doesn't bind privileged ports or touch host files).
