@@ -15,6 +15,10 @@ RUN mvn clean package -pl services/ticket-service -am -DskipTests
 
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
-COPY --from=builder /app/services/ticket-service/target/*.jar app.jar
+# Run as an unprivileged, non-login user - the base image runs as root by default, and this
+# process never needs to be root (it doesn't bind privileged ports or touch host files).
+RUN addgroup -S app && adduser -S -G app app
+COPY --from=builder --chown=app:app /app/services/ticket-service/target/*.jar app.jar
+USER app
 EXPOSE 8081
 ENTRYPOINT ["java", "-jar", "app.jar"]

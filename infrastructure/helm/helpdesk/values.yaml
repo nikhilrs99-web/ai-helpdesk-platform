@@ -6,7 +6,9 @@ frontend:
   image:
     repository: helpdesk/frontend
     tag: latest
-  port: 80
+  # nginx now runs as a non-root user (see frontend/Dockerfile), which can't bind to port 80
+  # without extra Linux capabilities, so it listens on the unprivileged 8080 instead.
+  port: 8080
   resources:
     requests:
       cpu: 100m

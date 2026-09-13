@@ -18,6 +18,15 @@ spring:
     url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5433}/${POSTGRES_DB:helpdesk}
     username: ${POSTGRES_USER:helpdesk_app}
     password: ${POSTGRES_PASSWORD:localdevpassword123}
+  data:
+    # @EnableCaching (KbServiceApplication) + spring-boot-starter-data-redis on the classpath
+    # means Spring auto-configures a RedisCacheManager for the @Cacheable/@CachePut/@CacheEvict
+    # annotations on KnowledgeArticleController - without this host, it defaulted to
+    # "localhost", which inside this container means itself, not the redis container, and
+    # every cached endpoint call would fail trying to reach a Redis that isn't there.
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
   flyway:
     # This service's tables live in the same shared "helpdesk" database/public schema as the
     # other services, each with its own migration timeline - a dedicated table name keeps
