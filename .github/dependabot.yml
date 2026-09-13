@@ -1,0 +1,33 @@
+version: 2
+updates:
+  # Every service (and common) shares one root Maven reactor, so a single entry rooted at
+  # "/" covers all of them - Dependabot resolves the whole multi-module tree from the root
+  # pom.xml, it doesn't need one entry per service module.
+  - package-ecosystem: "maven"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "docker"
+    directories:
+      - "/services/ticket-service"
+      - "/services/kb-service"
+      - "/services/ai-service"
+      - "/services/analytics-service"
+      - "/services/notification-service"
+      - "/services/api-gateway"
+      - "/frontend"
+    schedule:
+      interval: "weekly"
