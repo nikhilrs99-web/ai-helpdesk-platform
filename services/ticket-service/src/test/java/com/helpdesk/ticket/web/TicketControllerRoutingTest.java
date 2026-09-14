@@ -52,8 +52,9 @@ class TicketControllerRoutingTest {
                 .registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
         com.helpdesk.ticket.redis.RateLimiterService rateLimiterService = mock(com.helpdesk.ticket.redis.RateLimiterService.class);
         when(rateLimiterService.isAllowed(any())).thenReturn(true);
+        com.helpdesk.ticket.repository.SlaRepository slaRepository = mock(com.helpdesk.ticket.repository.SlaRepository.class);
         TicketController controller = new TicketController(repository, fakeStrategy, typeHandlerFactory,
-                outboxRepository, objectMapper, rateLimiterService);
+                outboxRepository, objectMapper, rateLimiterService, slaRepository);
 
         CreateTicketRequest request = new CreateTicketRequest(
                 "Crashes on save", "Stack trace attached", TicketCategory.BUG,
