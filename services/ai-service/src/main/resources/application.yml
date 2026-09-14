@@ -35,6 +35,15 @@ spring:
         distance-type: COSINE_DISTANCE
         dimensions: 1536
 
+# Backing calls for the agent tools in AgentToolsConfig. Docker's internal service DNS by
+# default (this service always runs inside docker-compose/Kubernetes, never standalone) -
+# see api-gateway's own route table for the same hostnames/ports.
+services:
+  ticket-service:
+    base-url: ${TICKET_SERVICE_URL:http://ticket-service:8081}
+  kb-service:
+    base-url: ${KB_SERVICE_URL:http://kb-service:8082}
+
 management:
   endpoints:
     web:

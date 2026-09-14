@@ -2,6 +2,7 @@ package com.helpdesk.ticket.web;
 
 import com.helpdesk.common.enums.TicketCategory;
 import com.helpdesk.ticket.domain.Ticket;
+import com.helpdesk.ticket.repository.SlaRepository;
 import com.helpdesk.ticket.repository.TicketRepository;
 import com.helpdesk.ticket.routing.RoutingStrategy;
 import com.helpdesk.ticket.security.SecurityConfig;
@@ -62,6 +63,9 @@ class TicketControllerSecurityTest {
 
     @MockBean
     private com.helpdesk.ticket.redis.RateLimiterService rateLimiterService;
+
+    @MockBean
+    private SlaRepository slaRepository;
 
     // Stops OAuth2ResourceServerAutoConfiguration from resolving a real JwtDecoder against the
     // configured Keycloak issuer-uri during context startup - SecurityMockMvcRequestPostProcessors
