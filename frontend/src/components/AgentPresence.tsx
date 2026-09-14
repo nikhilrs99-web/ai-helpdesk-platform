@@ -1,24 +1,37 @@
-import React, { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { agentsApi } from '../api/agents';
+import { useAuth } from '../auth/AuthContext';
 
 export default function AgentPresence() {
+  const { hasRole } = useAuth();
   const [isOnline, setIsOnline] = useState(false);
+  const isAgent = hasRole('agent') || hasRole('admin');
 
   useEffect(() => {
-    // Ping the backend presence API on mount and every 60 seconds
-    const pingPresence = async () => {
+    if (!isAgent) return;
+
+    // AgentController.pingPresence (agent/admin only) marks this agent online for a TTL
+    // window in Redis (AgentPresenceService) - there's no separate "get status" endpoint,
+    // so a successful ping *is* the online signal, repeated before the TTL can expire.
+    let cancelled = false;
+    const ping = async () => {
       try {
-        // Mocking API call to /api/agents/ping
-        // await fetch('/api/agents/ping', { method: 'POST', headers: { Authorization: 'Bearer ...' } });
-        setIsOnline(true);
-      } catch (e) {
-        setIsOnline(false);
+        await agentsApi.ping();
+        if (!cancelled) setIsOnline(true);
+      } catch {
+        if (!cancelled) setIsOnline(false);
       }
     };
 
-    pingPresence();
-    const interval = setInterval(pingPresence, 60000);
-    return () => clearInterval(interval);
-  }, []);
+    ping();
+    const interval = setInterval(ping, 60000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [isAgent]);
+
+  if (!isAgent) return null;
 
   return (
     <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-700 rounded-full w-max">
