@@ -45,7 +45,31 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        service: [ticket-service, kb-service, ai-service, notification-service, analytics-service, api-gateway, frontend]
+        # frontend's Dockerfile/build context don't follow the services/<name>/Dockerfile
+        # pattern the other 6 do (see docker-compose.yml) - listing context+dockerfile
+        # explicitly per entry avoids computing a wrong path for it at build time.
+        include:
+          - service: ticket-service
+            context: .
+            dockerfile: services/ticket-service/Dockerfile
+          - service: kb-service
+            context: .
+            dockerfile: services/kb-service/Dockerfile
+          - service: ai-service
+            context: .
+            dockerfile: services/ai-service/Dockerfile
+          - service: notification-service
+            context: .
+            dockerfile: services/notification-service/Dockerfile
+          - service: analytics-service
+            context: .
+            dockerfile: services/analytics-service/Dockerfile
+          - service: api-gateway
+            context: .
+            dockerfile: services/api-gateway/Dockerfile
+          - service: frontend
+            context: ./frontend
+            dockerfile: frontend/Dockerfile
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -66,7 +90,7 @@ jobs:
           ECR_REPOSITORY: helpdesk/${{ matrix.service }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f services/${{ matrix.service }}/Dockerfile .
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f ${{ matrix.dockerfile }} ${{ matrix.context }}
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
       - name: Trivy Vulnerability Scanner
