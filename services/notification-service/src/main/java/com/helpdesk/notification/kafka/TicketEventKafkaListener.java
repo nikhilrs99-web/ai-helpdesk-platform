@@ -1,6 +1,10 @@
 package com.helpdesk.notification.kafka;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.helpdesk.common.event.DomainEvent;
+import com.helpdesk.common.event.EscalationApprovedEvent;
 import com.helpdesk.common.event.TicketCreatedEvent;
 import com.helpdesk.notification.observer.NotificationDispatcher;
 import org.slf4j.Logger;
@@ -15,36 +19,55 @@ import java.util.concurrent.ConcurrentHashMap;
 public class TicketEventKafkaListener {
 
     private static final Logger log = LoggerFactory.getLogger(TicketEventKafkaListener.class);
-    
+
     private final NotificationDispatcher dispatcher;
     private final ObjectMapper objectMapper;
     // In-memory idempotency check (for temporary use before Redis/DB deduplication)
     private final Set<String> processedEvents = ConcurrentHashMap.newKeySet();
+
+    // Every event's own eventType field is what actually routes it - reading this first,
+    // separately from the concrete type, is what makes the switch below possible instead of
+    // a payload.contains("\"ticket.created\"") substring guess.
+    //
+    // NOTE: sla.breached is deliberately not handled on this branch - that case lives on the
+    // separate, not-yet-merged fix/sla-outbox-notifications branch, which also rewrites this
+    // same method. Merging both will conflict here; combine the two switches (this one adds
+    // escalation.approved, that one adds sla.breached) rather than picking one side.
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private record EventEnvelope(String eventType) {}
 
     public TicketEventKafkaListener(NotificationDispatcher dispatcher, ObjectMapper objectMapper) {
         this.dispatcher = dispatcher;
         this.objectMapper = objectMapper;
     }
 
+    // No longer catches-and-swallows every exception: a deserialization failure or a
+    // dispatch problem now propagates so the DefaultErrorHandler + DeadLetterPublishingRecoverer
+    // configured in KafkaConfig can actually retry and DLQ it.
     @KafkaListener(topics = "ticket-events", groupId = "notification-group")
-    public void handleTicketEvent(String payload) {
-        try {
-            // Very simplistic event type extraction for now
-            if (payload.contains("\"ticket.created\"")) {
-                TicketCreatedEvent event = objectMapper.readValue(payload, TicketCreatedEvent.class);
-                
-                String eventId = event.eventId().toString();
-                if (processedEvents.add(eventId)) {
-                    log.info("Received ticket created event from Kafka: {}", eventId);
-                    dispatcher.dispatch(event);
-                } else {
-                    log.info("Ignoring duplicate ticket created event: {}", eventId);
-                }
-            } else {
-                log.debug("Ignoring unsupported event: {}", payload);
-            }
-        } catch (Exception e) {
-            log.error("Failed to process event payload: {}", payload, e);
+    public void handleTicketEvent(String payload) throws JsonProcessingException {
+        String eventType = objectMapper.readValue(payload, EventEnvelope.class).eventType();
+
+        DomainEvent event = switch (eventType) {
+            case TicketCreatedEvent.EVENT_TYPE -> objectMapper.readValue(payload, TicketCreatedEvent.class);
+            case EscalationApprovedEvent.EVENT_TYPE -> objectMapper.readValue(payload, EscalationApprovedEvent.class);
+            // Forward-compatible on purpose (see docs/kafka/event-schema.md's versioning
+            // policy): a future event type this consumer doesn't know about yet is ignored,
+            // not an error.
+            default -> null;
+        };
+
+        if (event == null) {
+            log.debug("Ignoring unsupported event type: {}", eventType);
+            return;
+        }
+
+        String eventId = event.eventId().toString();
+        if (processedEvents.add(eventId)) {
+            log.info("Received {} event from Kafka: {}", eventType, eventId);
+            dispatcher.dispatch(event);
+        } else {
+            log.info("Ignoring duplicate {} event: {}", eventType, eventId);
         }
     }
 }
