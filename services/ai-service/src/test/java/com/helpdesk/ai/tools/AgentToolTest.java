@@ -4,7 +4,12 @@ import com.helpdesk.ai.tools.AgentToolsConfig.*;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.ApplicationContext;
+import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.utility.DockerImageName;
 
 import java.util.List;
 import java.util.Map;
@@ -12,8 +17,17 @@ import java.util.function.Function;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+// A full @SpringBootTest with nothing mocked - it needs its own Postgres for the same reason
+// AiControllerTest does (JPA/Flyway startup), and pgvector specifically since
+// V1__init_vector_store.sql runs CREATE EXTENSION vector.
 @SpringBootTest
+@Testcontainers
 class AgentToolTest {
+
+    @Container
+    @ServiceConnection
+    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>(
+            DockerImageName.parse("pgvector/pgvector:pg16").asCompatibleSubstituteFor("postgres"));
 
     @Autowired
     private ApplicationContext context;
