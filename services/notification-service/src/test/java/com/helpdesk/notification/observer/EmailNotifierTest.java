@@ -2,6 +2,7 @@ package com.helpdesk.notification.observer;
 
 import com.helpdesk.common.enums.TicketCategory;
 import com.helpdesk.common.event.DomainEvent;
+import com.helpdesk.common.event.EscalationApprovedEvent;
 import com.helpdesk.common.event.TicketCreatedEvent;
 import org.junit.jupiter.api.Test;
 
@@ -22,6 +23,16 @@ class EmailNotifierTest {
                 TicketCategory.ACCESS, "requester-1");
 
         assertThat(notifier.supports(event)).isTrue();
+    }
+
+    @Test
+    void supportsEscalationApprovedEvents() {
+        EscalationApprovedEvent event = new EscalationApprovedEvent(UUID.randomUUID(),
+                EscalationApprovedEvent.CURRENT_VERSION, Instant.now(), UUID.randomUUID(),
+                UUID.randomUUID(), "Customer is very upset", "agent-1");
+
+        assertThat(notifier.supports(event)).isTrue();
+        assertThatCode(() -> notifier.notify(event)).doesNotThrowAnyException();
     }
 
     @Test
