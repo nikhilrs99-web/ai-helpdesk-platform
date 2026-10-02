@@ -42,6 +42,15 @@ public class AnalyticsKafkaListener {
             if ("ticket.created".equals(eventType)) {
                 metric.setCategory(node.path("category").asText());
                 metric.setStatus("OPEN");
+            } else if ("ticket.updated".equals(eventType)) {
+                String newStatus = node.path("newStatus").asText();
+                metric.setStatus(newStatus);
+                if ("RESOLVED".equals(newStatus) || "CLOSED".equals(newStatus)) {
+                    metric.setResolvedAt(Instant.now());
+                }
+                if (node.path("aiResolved").asBoolean(false)) {
+                    metric.setAiAutoResolved(true);
+                }
             } else if ("sla.breached".equals(eventType)) {
                 metric.setSlaBreached(true);
             }

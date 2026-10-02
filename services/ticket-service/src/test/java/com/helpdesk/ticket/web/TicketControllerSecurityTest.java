@@ -67,6 +67,9 @@ class TicketControllerSecurityTest {
     @MockBean
     private SlaRepository slaRepository;
 
+    @MockBean
+    private com.helpdesk.ticket.repository.EscalationRepository escalationRepository;
+
     // Stops OAuth2ResourceServerAutoConfiguration from resolving a real JwtDecoder against the
     // configured Keycloak issuer-uri during context startup - SecurityMockMvcRequestPostProcessors
     // .jwt() injects a pre-authenticated principal directly and never decodes a real token.
@@ -79,6 +82,7 @@ class TicketControllerSecurityTest {
         ticket.setDescription("Password reset link never arrives");
         ticket.setCategory(TicketCategory.ACCESS);
         ticket.setRequesterId(requesterId);
+        org.springframework.test.util.ReflectionTestUtils.setField(ticket, "id", UUID.randomUUID());
         return ticket;
     }
 

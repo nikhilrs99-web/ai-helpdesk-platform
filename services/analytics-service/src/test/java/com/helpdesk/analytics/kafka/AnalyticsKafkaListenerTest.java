@@ -143,4 +143,41 @@ class AnalyticsKafkaListenerTest {
 
         verify(repository, never()).save(any());
     }
+
+    @Test
+    void aiResolvedTicketUpdatedEventSetsAiAutoResolvedAndResolvedAt() {
+        TicketMetricRepository repository = mock(TicketMetricRepository.class);
+        UUID ticketId = UUID.randomUUID();
+        TicketMetric existing = new TicketMetric();
+        existing.setTicketId(ticketId);
+        when(repository.findByTicketId(ticketId)).thenReturn(existing);
+        AnalyticsKafkaListener listener = new AnalyticsKafkaListener(repository, objectMapper);
+
+        listener.handleEvent("""
+                {"eventType": "ticket.updated", "ticketId": "%s", "previousStatus": "OPEN",
+                 "newStatus": "RESOLVED", "aiResolved": true}
+                """.formatted(ticketId));
+
+        org.mockito.ArgumentCaptor<TicketMetric> captor = org.mockito.ArgumentCaptor.forClass(TicketMetric.class);
+        verify(repository).save(captor.capture());
+        assertThat(captor.getValue().isAiAutoResolved()).isTrue();
+        assertThat(captor.getValue().getStatus()).isEqualTo("RESOLVED");
+        assertThat(captor.getValue().getResolvedAt()).isNotNull();
+    }
+
+    @Test
+    void humanResolvedTicketUpdatedEventDoesNotCountAsAiResolved() {
+        TicketMetricRepository repository = mock(TicketMetricRepository.class);
+        UUID ticketId = UUID.randomUUID();
+        when(repository.findByTicketId(ticketId)).thenReturn(null);
+        AnalyticsKafkaListener listener = new AnalyticsKafkaListener(repository, objectMapper);
+
+        listener.handleEvent("""
+                {"eventType": "ticket.updated", "ticketId": "%s", "newStatus": "RESOLVED", "aiResolved": false}
+                """.formatted(ticketId));
+
+        org.mockito.ArgumentCaptor<TicketMetric> captor = org.mockito.ArgumentCaptor.forClass(TicketMetric.class);
+        verify(repository).save(captor.capture());
+        assertThat(captor.getValue().isAiAutoResolved()).isFalse();
+    }
 }

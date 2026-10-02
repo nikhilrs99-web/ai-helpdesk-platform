@@ -189,6 +189,24 @@ public class AgentToolsConfig {
         };
     }
 
+    @Bean
+    @Description("Mark a ticket as resolved by the AI agent, ONLY when your answer fully handled the user's request and no human help is needed. Fails if the ticket already has an escalation or is past triage.")
+    public Function<TicketRequest, String> resolveTicket() {
+        return request -> {
+            log.info("Tool called: resolveTicket for {}", request.ticketId());
+            try {
+                TicketView ticket = ticketServiceClient.post()
+                        .uri("/api/tickets/{id}/ai-resolve", request.ticketId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + bearerToken())
+                        .retrieve()
+                        .body(TicketView.class);
+                return "Ticket " + request.ticketId() + " is now " + (ticket == null ? "RESOLVED" : ticket.status()) + " (resolved by AI).";
+            } catch (Exception e) {
+                return describeError(e, "resolving ticket " + request.ticketId());
+            }
+        };
+    }
+
     private static String bearerToken() {
         var authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication instanceof JwtAuthenticationToken jwtAuth) {
@@ -203,6 +221,9 @@ public class AgentToolsConfig {
         }
         if (e instanceof HttpClientErrorException.Forbidden) {
             return "Not authorized to view " + context + ".";
+        }
+        if (e instanceof HttpClientErrorException.Conflict) {
+            return "Cannot do that for " + context + " in its current state (for example it was already escalated or is not open).";
         }
         if (e instanceof HttpClientErrorException.BadRequest) {
             return "Invalid request for " + context + ".";

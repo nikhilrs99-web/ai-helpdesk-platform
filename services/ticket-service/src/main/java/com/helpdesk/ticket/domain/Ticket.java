@@ -51,6 +51,9 @@ public class Ticket extends BaseEntity {
     @Column(name = "sla_breach_notified", nullable = false)
     private boolean slaBreachNotified = false;
 
+    @Column(name = "ai_resolved", nullable = false)
+    private boolean aiResolved = false;
+
     /**
      * Category-specific fields (e.g. browser/appVersion for BUG, invoiceId for BILLING),
      * validated and populated by the right TicketTypeHandler (Factory pattern) rather than
@@ -137,6 +140,14 @@ public class Ticket extends BaseEntity {
 
     public void markSlaBreachNotified() {
         this.slaBreachNotified = true;
+    }
+
+    public boolean isAiResolved() {
+        return aiResolved;
+    }
+
+    public void markAiResolved() {
+        this.aiResolved = true;
     }
 
     public Map<String, String> getMetadata() {

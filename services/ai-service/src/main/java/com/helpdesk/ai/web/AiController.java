@@ -85,14 +85,15 @@ public class AiController {
         
         // Day 56-58: Agent orchestration picks the right tool automatically
         return chatClient.prompt()
-                .system("You are an autonomous support agent. Use the provided tools to fetch ticket details, SLA status, customer history, or search the KB. If a user asks to escalate, you MUST use the createEscalation tool and inform them it is pending human approval.")
+                .system("You are an autonomous support agent. Use the provided tools to fetch ticket details, SLA status, customer history, or search the KB. If a user asks to escalate, you MUST use the createEscalation tool and inform them it is pending human approval. Only call resolveTicket when your answer fully handled the request and the user confirms nothing else is needed.")
                 .user(userMessage)
                 .toolNames(
                         "getTicketStatus",
                         "searchKnowledgeBase",
                         "getSLAStatus",
                         "getCustomerTickets",
-                        "createEscalation"
+                        "createEscalation",
+                        "resolveTicket"
                 )
                 .call()
                 .content();

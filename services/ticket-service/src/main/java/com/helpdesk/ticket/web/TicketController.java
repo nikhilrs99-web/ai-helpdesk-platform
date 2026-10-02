@@ -42,13 +42,15 @@ public class TicketController {
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
     private final com.helpdesk.ticket.redis.RateLimiterService rateLimiterService;
     private final SlaRepository slaRepository;
+    private final com.helpdesk.ticket.repository.EscalationRepository escalationRepository;
 
     public TicketController(TicketRepository ticketRepository, RoutingStrategy routingStrategy,
                              TicketTypeHandlerFactory typeHandlerFactory,
                              com.helpdesk.ticket.outbox.OutboxRepository outboxRepository,
                              com.fasterxml.jackson.databind.ObjectMapper objectMapper,
                              com.helpdesk.ticket.redis.RateLimiterService rateLimiterService,
-                             SlaRepository slaRepository) {
+                             SlaRepository slaRepository,
+                             com.helpdesk.ticket.repository.EscalationRepository escalationRepository) {
         this.ticketRepository = ticketRepository;
         this.routingStrategy = routingStrategy;
         this.typeHandlerFactory = typeHandlerFactory;
@@ -56,6 +58,7 @@ public class TicketController {
         this.objectMapper = objectMapper;
         this.rateLimiterService = rateLimiterService;
         this.slaRepository = slaRepository;
+        this.escalationRepository = escalationRepository;
     }
 
     @PostMapping
@@ -164,10 +167,61 @@ public class TicketController {
 
     @PreAuthorize("hasAnyRole('agent','admin')")
     @PatchMapping("/{id}/status")
+    @org.springframework.transaction.annotation.Transactional
     public TicketResponse changeStatus(@PathVariable UUID id, @Valid @RequestBody ChangeStatusRequest request) {
         Ticket ticket = findOrThrow(id);
+        TicketStatus previous = ticket.getStatus();
         ticket.changeStatus(request.status());
-        return TicketResponse.from(ticketRepository.save(ticket));
+        Ticket saved = ticketRepository.save(ticket);
+        publishTicketUpdated(saved, previous);
+        return TicketResponse.from(saved);
+    }
+
+    /**
+     * Called by ai-service's resolveTicket tool (with the ticket owner's own token) when the
+     * agent's answer fully handled the request. Only legal while the ticket is still OPEN or
+     * AI_TRIAGED and has no pending/approved escalation - once a human is involved it is no
+     * longer an AI resolution. Marks the ticket ai_resolved so analytics' AI resolution rate
+     * is derived from real events.
+     */
+    @PreAuthorize("hasAnyRole('agent','admin') or @ticketSecurity.isOwner(authentication, #id)")
+    @PostMapping("/{id}/ai-resolve")
+    @org.springframework.transaction.annotation.Transactional
+    public TicketResponse aiResolve(@PathVariable UUID id) {
+        Ticket ticket = findOrThrow(id);
+        if (ticket.getStatus() != TicketStatus.OPEN && ticket.getStatus() != TicketStatus.AI_TRIAGED) {
+            throw new com.helpdesk.ticket.domain.state.IllegalTicketTransitionException(
+                    ticket.getStatus(), TicketStatus.RESOLVED);
+        }
+        boolean humanInvolved = escalationRepository.findByTicketIdOrderByCreatedAtDesc(id).stream()
+                .anyMatch(e -> e.getStatus() != com.helpdesk.ticket.domain.EscalationStatus.REJECTED);
+        if (humanInvolved) {
+            throw new com.helpdesk.ticket.domain.state.IllegalTicketTransitionException(
+                    ticket.getStatus(), TicketStatus.RESOLVED);
+        }
+
+        TicketStatus previous = ticket.getStatus();
+        if (previous == TicketStatus.OPEN) {
+            ticket.changeStatus(TicketStatus.AI_TRIAGED);
+        }
+        ticket.changeStatus(TicketStatus.RESOLVED);
+        ticket.markAiResolved();
+        Ticket saved = ticketRepository.save(ticket);
+        publishTicketUpdated(saved, previous);
+        return TicketResponse.from(saved);
+    }
+
+    private void publishTicketUpdated(Ticket ticket, TicketStatus previous) {
+        com.helpdesk.common.event.TicketUpdatedEvent event = new com.helpdesk.common.event.TicketUpdatedEvent(
+                UUID.randomUUID(), com.helpdesk.common.event.TicketUpdatedEvent.CURRENT_VERSION,
+                Instant.now(), ticket.getId(), previous, ticket.getStatus(), ticket.isAiResolved());
+        try {
+            outboxRepository.save(new com.helpdesk.ticket.outbox.OutboxEvent(
+                    event.eventId(), "Ticket", ticket.getId().toString(), event.eventType(),
+                    objectMapper.writeValueAsString(event)));
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to serialize ticket.updated event for ticket " + ticket.getId(), e);
+        }
     }
 
     private Ticket findOrThrow(UUID id) {

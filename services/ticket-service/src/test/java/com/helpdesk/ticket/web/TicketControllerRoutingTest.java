@@ -54,7 +54,8 @@ class TicketControllerRoutingTest {
         when(rateLimiterService.isAllowed(any())).thenReturn(true);
         com.helpdesk.ticket.repository.SlaRepository slaRepository = mock(com.helpdesk.ticket.repository.SlaRepository.class);
         TicketController controller = new TicketController(repository, fakeStrategy, typeHandlerFactory,
-                outboxRepository, objectMapper, rateLimiterService, slaRepository);
+                outboxRepository, objectMapper, rateLimiterService, slaRepository,
+                mock(com.helpdesk.ticket.repository.EscalationRepository.class));
 
         CreateTicketRequest request = new CreateTicketRequest(
                 "Crashes on save", "Stack trace attached", TicketCategory.BUG,

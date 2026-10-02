@@ -136,6 +136,29 @@ class AgentToolTest {
                 .containsEntry("escalationId", "ESC-1");
     }
 
+    @Test
+    void resolveTicket_callsAiResolveAndForwardsToken() {
+        ticketServer.expect(requestTo("http://ticket-service:8081/api/tickets/TKT-7/ai-resolve"))
+                .andExpect(method(org.springframework.http.HttpMethod.POST))
+                .andExpect(header("Authorization", "Bearer test-token"))
+                .andRespond(withSuccess("{\"id\":\"TKT-7\",\"status\":\"RESOLVED\"}", MediaType.APPLICATION_JSON));
+
+        Function<TicketRequest, String> tool = (Function<TicketRequest, String>) getBean("resolveTicket");
+
+        assertThat(tool.apply(new TicketRequest("TKT-7"))).contains("RESOLVED");
+        ticketServer.verify();
+    }
+
+    @Test
+    void resolveTicket_explainsConflict() {
+        ticketServer.expect(requestTo("http://ticket-service:8081/api/tickets/TKT-8/ai-resolve"))
+                .andRespond(withStatus(HttpStatus.CONFLICT));
+
+        Function<TicketRequest, String> tool = (Function<TicketRequest, String>) getBean("resolveTicket");
+
+        assertThat(tool.apply(new TicketRequest("TKT-8"))).containsIgnoringCase("cannot");
+    }
+
     @SuppressWarnings("unchecked")
     private Object getBean(String toolName) {
         return switch (toolName) {
@@ -144,6 +167,7 @@ class AgentToolTest {
             case "getSLAStatus" -> tools.getSLAStatus();
             case "getCustomerTickets" -> tools.getCustomerTickets();
             case "createEscalation" -> tools.createEscalation();
+            case "resolveTicket" -> tools.resolveTicket();
             default -> throw new IllegalArgumentException(toolName);
         };
     }
