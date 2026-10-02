@@ -32,7 +32,7 @@ Published when a new ticket is created.
 | `requesterId` | String | Keycloak subject of the user who raised it |
 
 ### `ticket.updated` — `TicketUpdatedEvent`
-Published when a ticket's status changes.
+Published when a ticket's status changes (by an agent/admin via PATCH status, or by the AI agent via `POST /api/tickets/{id}/ai-resolve`). analytics-service uses `aiResolved` for the AI resolution rate.
 
 | Field | Type | Notes |
 |---|---|---|
@@ -42,6 +42,7 @@ Published when a ticket's status changes.
 | `ticketId` | UUID | |
 | `previousStatus` | TicketStatus | |
 | `newStatus` | TicketStatus | |
+| `aiResolved` | boolean | true when the AI agent resolved the ticket on its own (no escalation, no human); optional for old consumers |
 
 ### `sla.breached` — `SlaBreachedEvent`
 Published when a ticket misses its SLA target.

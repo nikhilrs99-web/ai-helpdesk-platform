@@ -6,6 +6,7 @@ import NewTicketForm from './components/NewTicketForm';
 import Dashboard from './components/Dashboard';
 import KnowledgeBase from './components/KnowledgeBase';
 import AgentPresence from './components/AgentPresence';
+import Assistant from './components/Assistant';
 import { useAuth } from './auth/AuthContext';
 
 function App() {
@@ -35,6 +36,11 @@ function App() {
                 Knowledge Base
               </Link>
             </li>
+            <li>
+              <Link to="/assistant" className="block py-2.5 px-4 rounded transition duration-200 hover:bg-slate-800 hover:text-white">
+                AI Assistant
+              </Link>
+            </li>
           </ul>
           <div className="p-4 border-t border-slate-800 flex items-center justify-between">
             <span className="text-sm text-slate-300 truncate">{username}</span>
@@ -54,6 +60,7 @@ function App() {
             <Route path="/tickets/new" element={<NewTicketForm />} />
             <Route path="/tickets/:id" element={<TicketDetail />} />
             <Route path="/kb" element={<KnowledgeBase />} />
+            <Route path="/assistant" element={<Assistant />} />
           </Routes>
         </main>
       </div>

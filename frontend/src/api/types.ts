@@ -91,3 +91,27 @@ export interface ApiError {
   message: string;
   path: string;
 }
+
+// Matches services/ticket-service/.../web/dto/EscalationResponse.java
+export type EscalationStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+export interface EscalationResponse {
+  id: string;
+  ticketId: string;
+  reason: string;
+  requestedBy: string;
+  status: EscalationStatus;
+  decidedBy: string | null;
+  createdAt: string;
+}
+
+// Matches services/ticket-service/.../web/dto/SlaStatusResponse.java
+export interface SlaStatusResponse {
+  ticketId: string;
+  slaType: string;
+  targetConfigured: boolean;
+  targetMinutes: number | null;
+  deadline: string | null;
+  breached: boolean;
+  minutesRemaining: number | null;
+}

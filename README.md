@@ -54,3 +54,16 @@ See [docs/architecture/design-patterns.md](docs/architecture/design-patterns.md)
 | Phase 12: Terraform & AWS | Wrote Infrastructure-as-Code modules for a production AWS deployment. Provisioned a 3-AZ VPC, an EKS cluster, managed RDS PostgreSQL (pgvector-enabled), ElastiCache Redis, and ECR repositories. Configured remote S3/DynamoDB state backend and documented the deployment/teardown process. |
 | Phase 13: CI/CD & GitOps | Built a GitHub Actions pipeline featuring Maven tests, OWASP Dependency-Check, SonarQube SAST, Docker builds, and Trivy image scanning. Configured Argo CD for GitOps deployments directly to EKS. Documented OWASP ZAP dynamic baseline scan results. |
 | Phase 14: Security Hardening & Final Polish | Migrated plaintext credentials to AWS Secrets Manager using External Secrets Operator. Documented system architecture, database design, and end-to-end performance metrics. Bumped version to `1.0.0-RELEASE`. Executed `terraform destroy` to cleanly tear down AWS infrastructure. |
+
+## Post-release hardening (v1.0.0 follow-ups)
+
+A later audit found parts of the original build log were scaffolding rather than working features. These have since been implemented:
+
+- **Frontend** now builds, authenticates via Keycloak, and talks to the real gateway (tickets, SLA status, escalations with agent approve/reject, KB search, dashboard, AI assistant chat). Vitest tests run in CI.
+- **ai-service**: agent tools call the real services using the caller's own token; escalations are persisted behind a human-approval gate; articles are chunked before embedding; `/rag/search` is true hybrid retrieval (vector + Postgres full-text, fused with RRF); `/ticket/analyze` returns validated structured output; all LLM calls sit behind a circuit breaker.
+- **Events/outbox**: `SlaBreachJob` checks real tickets; `OutboxWorker` waits for the Kafka ack; `ticket.updated` and `escalation.approved` events are published; consumers use proper DLQ/retry.
+- **notification-service** sends real SMTP email (MailHog in docker-compose at http://localhost:8025).
+- **analytics-service**: AI resolution rate is computed from real `ticket.updated` events (`aiResolved`).
+- **Infra**: HPA for every workload, External Secrets Operator + AWS Secrets Manager wiring (`secrets.tf`, `externalsecret.yaml`, opt-in via `secrets.external.enabled`), CI frontend build path fixed.
+
+Known remaining gaps: the Helm Postgres subchart lacks the pgvector extension (ai-service needs a custom image), email goes to one configured mailbox rather than per-user addresses, Loki/log aggregation is not deployed, and the new Terraform/Helm secrets wiring has not been applied to a live AWS account.

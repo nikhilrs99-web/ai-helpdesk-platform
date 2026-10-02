@@ -26,6 +26,10 @@ data:
   # (Postgres forks one backend process per connection), not a broken app or chart. A small
   # per-service pool is plenty for these services' actual traffic and spreads startup load.
   SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: "3"
+  # notification-service sends real mail over SMTP - point smtp.host at a real relay in production.
+  SMTP_HOST: {{ .Values.smtp.host | quote }}
+  SMTP_PORT: {{ .Values.smtp.port | quote }}
+{{- if not .Values.secrets.external.enabled }}
 ---
 apiVersion: v1
 kind: Secret
@@ -41,3 +45,4 @@ stringData:
   POSTGRES_USER: {{ .Values.postgresql.auth.username | default "postgres" | quote }}
   POSTGRES_PASSWORD: {{ .Values.postgresql.auth.postgresPassword | quote }}
   OPENAI_API_KEY: {{ .Values.secrets.openaiApiKey | quote }}
+{{- end }}

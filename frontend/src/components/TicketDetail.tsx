@@ -5,6 +5,8 @@ import { ApiRequestError } from '../api/client';
 import { TICKET_STATUSES, type TicketResponse, type TicketStatus } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import StatusBadge from './StatusBadge';
+import SlaPanel from './SlaPanel';
+import EscalationPanel from './EscalationPanel';
 
 export default function TicketDetail() {
   const { id } = useParams<{ id: string }>();
@@ -108,6 +110,10 @@ export default function TicketDetail() {
           <p className="text-slate-700 whitespace-pre-wrap mb-4">{ticket.description}</p>
         )}
 
+        <div className="mb-4">
+          <SlaPanel ticketId={ticket.id} />
+        </div>
+
         {Object.keys(ticket.metadata).length > 0 && (
           <div className="text-sm text-slate-600 border-t border-slate-100 pt-3 mb-4">
             {Object.entries(ticket.metadata).map(([k, v]) => (
@@ -172,6 +178,7 @@ export default function TicketDetail() {
             </button>
           </div>
         )}
+        <EscalationPanel ticketId={ticket.id} />
       </div>
     </div>
   );

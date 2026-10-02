@@ -69,16 +69,16 @@ Observer decouples "an event happened" from "here is everyone who cares."
 **Implementation notes**: `NotificationDispatcher` is the Subject - it holds every Spring-injected
 `NotificationObserver` bean and calls `supports(event)` then `notify(event)` on each one that cares,
 isolating one observer's failure from the others. `EmailNotifier` is the one observer so far, reacting to
-both `TicketCreatedEvent` and `SlaBreachedEvent` (still log-only pending a decision on where mail should
-actually go).
+`TicketCreatedEvent`, `SlaBreachedEvent` and `EscalationApprovedEvent`, sending real SMTP mail (MailHog locally; set `SMTP_HOST`/`SMTP_PORT`/`NOTIFICATION_EMAIL_TO`). Events carry ids not addresses, so all mail goes to one configured support mailbox.
 **Code**: [`observer/NotificationDispatcher.java`](../../services/notification-service/src/main/java/com/helpdesk/notification/observer/NotificationDispatcher.java),
 [`observer/EmailNotifier.java`](../../services/notification-service/src/main/java/com/helpdesk/notification/observer/EmailNotifier.java)
 
 ## Circuit Breaker (resilience pattern) — AI service calls
-**Status**: Planned (Week 10)
+**Status**: Implemented
 **Where**: `ai-service`, calling the external LLM API
 **Why this over the obvious alternative**: Without it, an LLM outage means every ticket-processing request hangs
 on a timeout one at a time, potentially exhausting thread pools. A circuit breaker fails fast after repeated
 failures and falls back to a safe default (skip AI drafting, route to a human) instead of the outage cascading
 into the rest of the system.
-**Code**: _link added once implemented_
+**Implementation notes**: `LlmGuard` wraps every chat/agent/RAG call in a Resilience4j breaker (10-call window, 50% failure threshold, 30s open). When open, requests fail fast with HTTP 503 instead of waiting on the provider.
+**Code**: [`llm/LlmGuard.java`](../../services/ai-service/src/main/java/com/helpdesk/ai/llm/LlmGuard.java)
