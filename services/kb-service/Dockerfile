@@ -1,4 +1,4 @@
-FROM maven:3.9.6-eclipse-temurin-21 AS builder
+FROM maven:3-eclipse-temurin-24 AS builder
 WORKDIR /app
 COPY pom.xml .
 COPY common/pom.xml common/
