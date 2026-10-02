@@ -17,7 +17,7 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <spring-boot.version>3.3.4</spring-boot.version>
+        <spring-boot.version>4.1.1</spring-boot.version>
         <maven-failsafe-plugin.version>3.6.0</maven-failsafe-plugin.version>
         <!-- Boot's managed 1.19.8 cannot talk to Docker 29+ (API too old), so every Testcontainers test fails to find Docker. -->
         <testcontainers.version>1.21.4</testcontainers.version>
