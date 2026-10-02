@@ -60,10 +60,18 @@ jobs:
           npm test
           npm run build
 
+      # Needs repo settings: secret SONAR_TOKEN, and variables SONAR_HOST_URL (e.g.
+      # https://sonarcloud.io or your SonarQube server) and, for SonarCloud only,
+      # SONAR_ORGANIZATION. Skipped when no token is available (not configured yet, or a
+      # Dependabot/fork PR, which GitHub never gives secrets to) instead of failing the build.
+      # -DskipTests: the tests already ran in the Maven step above.
       - name: SonarQube Scan
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=ai-helpdesk
+        if: ${{ env.SONAR_TOKEN != '' }}
+        run: >
+          mvn -B -DskipTests verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+          -Dsonar.projectKey=ai-helpdesk
+          -Dsonar.host.url=${{ vars.SONAR_HOST_URL || 'https://sonarcloud.io' }}
+          ${{ vars.SONAR_ORGANIZATION && format('-Dsonar.organization={0}', vars.SONAR_ORGANIZATION) || '' }}
 
   docker-build-push:
     needs: build-test-scan
