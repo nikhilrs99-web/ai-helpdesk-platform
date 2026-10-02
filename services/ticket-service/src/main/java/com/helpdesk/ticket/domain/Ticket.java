@@ -46,6 +46,14 @@ public class Ticket extends BaseEntity {
     @Column(name = "routed_team")
     private String routedTeam;
 
+    // Set once SlaBreachJob has actually published a sla.breached event for this ticket, so
+    // a job that runs every 5 minutes doesn't re-publish the same breach forever.
+    @Column(name = "sla_breach_notified", nullable = false)
+    private boolean slaBreachNotified = false;
+
+    @Column(name = "ai_resolved", nullable = false)
+    private boolean aiResolved = false;
+
     /**
      * Category-specific fields (e.g. browser/appVersion for BUG, invoiceId for BILLING),
      * validated and populated by the right TicketTypeHandler (Factory pattern) rather than
@@ -124,6 +132,22 @@ public class Ticket extends BaseEntity {
 
     public void setRoutedTeam(String routedTeam) {
         this.routedTeam = routedTeam;
+    }
+
+    public boolean isSlaBreachNotified() {
+        return slaBreachNotified;
+    }
+
+    public void markSlaBreachNotified() {
+        this.slaBreachNotified = true;
+    }
+
+    public boolean isAiResolved() {
+        return aiResolved;
+    }
+
+    public void markAiResolved() {
+        this.aiResolved = true;
     }
 
     public Map<String, String> getMetadata() {

@@ -1,20 +1,26 @@
-{{- if .Values.aiService.hpa.enabled }}
+{{- /* One HorizontalPodAutoscaler per workload that sets hpa.enabled. CPU-utilization scaling
+       needs resources.requests.cpu on the Deployment, so every workload listed here has one
+       in values.yaml. */}}
+{{- range $name, $svc := dict "ticket-service" .Values.ticketService "api-gateway" .Values.apiGateway "ai-service" .Values.aiService "kb-service" .Values.kbService "notification-service" .Values.notificationService "analytics-service" .Values.analyticsService "frontend" .Values.frontend }}
+{{- if and $svc.hpa $svc.hpa.enabled }}
+---
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: ai-service-hpa
+  name: {{ $name }}-hpa
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: ai-service
-  minReplicas: {{ .Values.aiService.hpa.minReplicas }}
-  maxReplicas: {{ .Values.aiService.hpa.maxReplicas }}
+    name: {{ $name }}
+  minReplicas: {{ $svc.hpa.minReplicas }}
+  maxReplicas: {{ $svc.hpa.maxReplicas }}
   metrics:
     - type: Resource
       resource:
         name: cpu
         target:
           type: Utilization
-          averageUtilization: {{ .Values.aiService.hpa.targetCPUUtilizationPercentage }}
+          averageUtilization: {{ $svc.hpa.targetCPUUtilizationPercentage }}
+{{- end }}
 {{- end }}

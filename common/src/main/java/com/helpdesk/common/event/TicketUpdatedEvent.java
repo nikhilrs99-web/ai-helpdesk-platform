@@ -22,7 +22,8 @@ public record TicketUpdatedEvent(
         Instant occurredAt,
         UUID ticketId,
         TicketStatus previousStatus,
-        TicketStatus newStatus
+        TicketStatus newStatus,
+        boolean aiResolved
 ) implements DomainEvent {
 
     public static final int CURRENT_VERSION = 1;

@@ -2,6 +2,7 @@ package com.helpdesk.ticket.web;
 
 import com.helpdesk.common.enums.TicketCategory;
 import com.helpdesk.ticket.domain.Ticket;
+import com.helpdesk.ticket.repository.SlaRepository;
 import com.helpdesk.ticket.repository.TicketRepository;
 import com.helpdesk.ticket.routing.RoutingStrategy;
 import com.helpdesk.ticket.security.SecurityConfig;
@@ -63,6 +64,12 @@ class TicketControllerErrorHandlingTest {
     @MockBean
     private com.helpdesk.ticket.redis.RateLimiterService rateLimiterService;
 
+    @MockBean
+    private SlaRepository slaRepository;
+
+    @MockBean
+    private com.helpdesk.ticket.repository.EscalationRepository escalationRepository;
+
     // A bare @MockBean returns false for isAllowed(), which would 429 every request in this
     // class before the status-mapping logic under test ever runs - these tests aren't about
     // rate limiting, so keep it out of the way.
@@ -93,6 +100,7 @@ class TicketControllerErrorHandlingTest {
         ticket.setDescription("Password reset link never arrives");
         ticket.setCategory(TicketCategory.ACCESS);
         ticket.setRequesterId("customer-1");
+        org.springframework.test.util.ReflectionTestUtils.setField(ticket, "id", java.util.UUID.randomUUID());
         return ticket;
     }
 

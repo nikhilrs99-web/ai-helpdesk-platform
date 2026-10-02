@@ -17,6 +17,11 @@ frontend:
       cpu: 200m
       memory: 256Mi
 
+  hpa:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 75
 apiGateway:
   replicaCount: 2
   image:
@@ -32,6 +37,11 @@ apiGateway:
       cpu: 500m
       memory: 512Mi
 
+  hpa:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 75
 ticketService:
   replicaCount: 2
   image:
@@ -49,6 +59,11 @@ ticketService:
       cpu: 500m
       memory: 512Mi
 
+  hpa:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 75
 aiService:
   replicaCount: 1
   image:
@@ -77,6 +92,18 @@ kbService:
   # Matches server.port in services/kb-service/src/main/resources/application.yml.
   port: 8082
 
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  hpa:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 3
+    targetCPUUtilizationPercentage: 75
 notificationService:
   replicaCount: 1
   image:
@@ -85,6 +112,18 @@ notificationService:
   # Matches server.port in services/notification-service/src/main/resources/application.yml.
   port: 8084
 
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  hpa:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 3
+    targetCPUUtilizationPercentage: 75
 analyticsService:
   replicaCount: 1
   image:
@@ -93,12 +132,38 @@ analyticsService:
   # Matches server.port in services/analytics-service/src/main/resources/application.yml.
   port: 8085
 
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  hpa:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 3
+    targetCPUUtilizationPercentage: 75
+
+smtp:
+  # MailHog in docker-compose; use a real relay (SES, SendGrid, ...) in production.
+  host: mailhog
+  port: 1025
+
 # Secrets rendered into the helpdesk-secrets Kubernetes Secret by templates/config.yaml.
-# These are placeholders for local/dev use only - override with -f a separate, untracked
-# values-secrets.yaml or --set on the helm command line for anything real. A Kubernetes
-# Secret is base64, not encrypted, so this is still not where production credentials belong
-# long-term (see docs/architecture for moving to Vault / External Secrets Operator).
+# These are placeholders for local/dev use only. For production set external.enabled=true:
+# templates/externalsecret.yaml then syncs them from AWS Secrets Manager (created by
+# infrastructure/terraform/secrets.tf) via the External Secrets Operator, and the placeholder
+# Secret above is not rendered at all.
 secrets:
+  external:
+    enabled: false
+    storeName: aws-secrets-manager
+    region: us-east-1
+    remoteKey: helpdesk/dev
+    serviceAccountName: external-secrets-sa
+    # terraform output external_secrets_role_arn
+    roleArn: ""
   openaiApiKey: "sk-your-openai-key-here"
 
 # Subchart configurations

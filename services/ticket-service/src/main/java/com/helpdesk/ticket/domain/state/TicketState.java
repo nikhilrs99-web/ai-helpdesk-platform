@@ -25,7 +25,7 @@ public enum TicketState {
     AI_TRIAGED(TicketStatus.AI_TRIAGED) {
         @Override
         Set<TicketStatus> legalNextStatuses() {
-            return Set.of(TicketStatus.ASSIGNED, TicketStatus.CLOSED);
+            return Set.of(TicketStatus.ASSIGNED, TicketStatus.RESOLVED, TicketStatus.CLOSED);
         }
     },
     ASSIGNED(TicketStatus.ASSIGNED) {

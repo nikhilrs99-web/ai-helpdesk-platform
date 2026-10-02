@@ -32,7 +32,7 @@ Published when a new ticket is created.
 | `requesterId` | String | Keycloak subject of the user who raised it |
 
 ### `ticket.updated` — `TicketUpdatedEvent`
-Published when a ticket's status changes.
+Published when a ticket's status changes (by an agent/admin via PATCH status, or by the AI agent via `POST /api/tickets/{id}/ai-resolve`). analytics-service uses `aiResolved` for the AI resolution rate.
 
 | Field | Type | Notes |
 |---|---|---|
@@ -42,6 +42,7 @@ Published when a ticket's status changes.
 | `ticketId` | UUID | |
 | `previousStatus` | TicketStatus | |
 | `newStatus` | TicketStatus | |
+| `aiResolved` | boolean | true when the AI agent resolved the ticket on its own (no escalation, no human); optional for old consumers |
 
 ### `sla.breached` — `SlaBreachedEvent`
 Published when a ticket misses its SLA target.
@@ -55,7 +56,21 @@ Published when a ticket misses its SLA target.
 | `slaType` | String | which SLA target was missed (e.g. first-response, resolution) |
 | `breachedAt` | Instant | when the breach was detected |
 
+### `escalation.approved` — `EscalationApprovedEvent`
+Published when an agent/admin approves a PENDING escalation (`PATCH /api/tickets/{ticketId}/escalations/{id}/approve`).
+
+| Field | Type | Notes |
+|---|---|---|
+| `eventId` | UUID | |
+| `version` | int | |
+| `occurredAt` | Instant | |
+| `ticketId` | UUID | |
+| `escalationId` | UUID | the escalation record that was approved |
+| `reason` | String | copied from the escalation, so a consumer doesn't need a second lookup |
+| `approvedBy` | String | Keycloak subject of the approving agent/admin |
+
 ## Partitioning (planned, Week 7)
-All three topics will be partitioned by `ticketId`, so every event about the same ticket lands on the
-same partition and is processed in order by a given consumer — without this, `ticket.updated` could be
-processed before `ticket.created` by a fast consumer on a different partition.
+All four event types share the single `ticket-events` topic, partitioned by `ticketId` - every event
+about the same ticket lands on the same partition and is processed in order by a given consumer, without
+which `ticket.updated` could be processed before `ticket.created` by a fast consumer on a different
+partition.
