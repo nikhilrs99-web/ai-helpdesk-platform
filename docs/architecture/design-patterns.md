@@ -61,12 +61,18 @@ instead of compile time, since this map is built dynamically from Spring-injecte
 [`tickettype/TicketTypeHandlerFactory.java`](../../services/ticket-service/src/main/java/com/helpdesk/ticket/tickettype/TicketTypeHandlerFactory.java)
 
 ## Observer — Notification dispatch
-**Status**: Planned (Week 4)
+**Status**: Implemented
 **Where**: `notification-service`, notifying interested parties when a ticket event happens
 **Why this over the obvious alternative**: Multiple things may want to react to the same ticket event (email,
 in-app toast, Slack later) without `ticket-service` needing to know about every one of them individually.
 Observer decouples "an event happened" from "here is everyone who cares."
-**Code**: _link added once implemented_
+**Implementation notes**: `NotificationDispatcher` is the Subject - it holds every Spring-injected
+`NotificationObserver` bean and calls `supports(event)` then `notify(event)` on each one that cares,
+isolating one observer's failure from the others. `EmailNotifier` is the one observer so far, reacting to
+both `TicketCreatedEvent` and `SlaBreachedEvent` (still log-only pending a decision on where mail should
+actually go).
+**Code**: [`observer/NotificationDispatcher.java`](../../services/notification-service/src/main/java/com/helpdesk/notification/observer/NotificationDispatcher.java),
+[`observer/EmailNotifier.java`](../../services/notification-service/src/main/java/com/helpdesk/notification/observer/EmailNotifier.java)
 
 ## Circuit Breaker (resilience pattern) — AI service calls
 **Status**: Planned (Week 10)
