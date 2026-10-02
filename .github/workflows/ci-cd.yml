@@ -76,9 +76,11 @@ jobs:
           -Dsonar.host.url=${{ vars.SONAR_HOST_URL || 'https://sonarcloud.io' }}
           ${{ vars.SONAR_ORGANIZATION && format('-Dsonar.organization={0}', vars.SONAR_ORGANIZATION) || '' }}
 
+  # Set repo variable AWS_DEPLOY_ENABLED=true once AWS secrets and ECR exist; until then image push
+  # and GitOps update are skipped instead of failing main on missing credentials.
   docker-build-push:
     needs: build-test-scan
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && vars.AWS_DEPLOY_ENABLED == 'true'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -142,7 +144,7 @@ jobs:
 
   gitops-update:
     needs: docker-build-push
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && vars.AWS_DEPLOY_ENABLED == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
