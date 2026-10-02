@@ -1,13 +1,17 @@
 package com.helpdesk.ticket.web;
 
+import com.helpdesk.common.enums.TicketStatus;
+import com.helpdesk.ticket.domain.Sla;
 import com.helpdesk.ticket.domain.Ticket;
 import com.helpdesk.ticket.exception.TicketNotFoundException;
+import com.helpdesk.ticket.repository.SlaRepository;
 import com.helpdesk.ticket.repository.TicketRepository;
 import com.helpdesk.ticket.routing.RoutingStrategy;
 import com.helpdesk.ticket.tickettype.TicketTypeHandler;
 import com.helpdesk.ticket.tickettype.TicketTypeHandlerFactory;
 import com.helpdesk.ticket.web.dto.ChangeStatusRequest;
 import com.helpdesk.ticket.web.dto.CreateTicketRequest;
+import com.helpdesk.ticket.web.dto.SlaStatusResponse;
 import com.helpdesk.ticket.web.dto.TicketResponse;
 import com.helpdesk.ticket.web.dto.UpdateTicketRequest;
 import jakarta.validation.Valid;
@@ -22,6 +26,9 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 
 @RestController
@@ -34,18 +41,21 @@ public class TicketController {
     private final com.helpdesk.ticket.outbox.OutboxRepository outboxRepository;
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
     private final com.helpdesk.ticket.redis.RateLimiterService rateLimiterService;
+    private final SlaRepository slaRepository;
 
     public TicketController(TicketRepository ticketRepository, RoutingStrategy routingStrategy,
-                             TicketTypeHandlerFactory typeHandlerFactory, 
+                             TicketTypeHandlerFactory typeHandlerFactory,
                              com.helpdesk.ticket.outbox.OutboxRepository outboxRepository,
                              com.fasterxml.jackson.databind.ObjectMapper objectMapper,
-                             com.helpdesk.ticket.redis.RateLimiterService rateLimiterService) {
+                             com.helpdesk.ticket.redis.RateLimiterService rateLimiterService,
+                             SlaRepository slaRepository) {
         this.ticketRepository = ticketRepository;
         this.routingStrategy = routingStrategy;
         this.typeHandlerFactory = typeHandlerFactory;
         this.outboxRepository = outboxRepository;
         this.objectMapper = objectMapper;
         this.rateLimiterService = rateLimiterService;
+        this.slaRepository = slaRepository;
     }
 
     @PostMapping
@@ -106,14 +116,39 @@ public class TicketController {
     }
 
     @GetMapping
-    public Page<TicketResponse> list(Pageable pageable, Authentication authentication) {
-        // A customer only ever sees their own tickets; an agent/admin sees everything. This can't
-        // be expressed as a @PreAuthorize gate - that's all-or-nothing per method call, but a Page
-        // needs row-level filtering, so the scoping happens in which query actually runs.
-        if (isElevated(authentication)) {
-            return ticketRepository.findAll(pageable).map(TicketResponse::from);
+    public Page<TicketResponse> list(@RequestParam(required = false) String requesterId,
+                                      Pageable pageable, Authentication authentication) {
+        // A customer only ever sees their own tickets, regardless of what (if anything) they
+        // pass as requesterId - that can't be expressed as a @PreAuthorize gate (all-or-nothing
+        // per method call, not row-level), so the scoping happens in which query actually runs.
+        if (!isElevated(authentication)) {
+            return ticketRepository.findByRequesterId(authentication.getName(), pageable).map(TicketResponse::from);
         }
-        return ticketRepository.findByRequesterId(authentication.getName(), pageable).map(TicketResponse::from);
+        // An agent/admin can optionally narrow to one customer's tickets (e.g. the AI agent's
+        // getCustomerTickets tool, acting on that agent's own forwarded token) - otherwise sees all.
+        if (requesterId != null && !requesterId.isBlank()) {
+            return ticketRepository.findByRequesterId(requesterId, pageable).map(TicketResponse::from);
+        }
+        return ticketRepository.findAll(pageable).map(TicketResponse::from);
+    }
+
+    @PreAuthorize("hasAnyRole('agent','admin') or @ticketSecurity.isOwner(authentication, #id)")
+    @GetMapping("/{id}/sla-status")
+    public SlaStatusResponse slaStatus(@PathVariable UUID id) {
+        Ticket ticket = findOrThrow(id);
+        Optional<Sla> target = slaRepository.findByCategoryAndSlaType(ticket.getCategory(), "FIRST_RESPONSE");
+
+        if (target.isEmpty()) {
+            return new SlaStatusResponse(id, "FIRST_RESPONSE", false, null, null, false, null);
+        }
+
+        Instant deadline = ticket.getCreatedAt().plus(Duration.ofMinutes(target.get().getTargetMinutes()));
+        boolean resolved = ticket.getStatus() == TicketStatus.RESOLVED || ticket.getStatus() == TicketStatus.CLOSED;
+        boolean breached = !resolved && Instant.now().isAfter(deadline);
+        long minutesRemaining = Duration.between(Instant.now(), deadline).toMinutes();
+
+        return new SlaStatusResponse(id, "FIRST_RESPONSE", true, target.get().getTargetMinutes(),
+                deadline, breached, minutesRemaining);
     }
 
     @PreAuthorize("hasAnyRole('agent','admin') or @ticketSecurity.isOwner(authentication, #id)")

@@ -18,6 +18,8 @@ The agent **cannot** unilaterally execute write actions that mutate state or not
 - **Workflow**:
   1. The AI decides an escalation is needed based on the user's chat input and SLA status.
   2. The AI invokes the `createEscalation` tool with `ticketId` and `reason`.
-  3. The tool executes on the backend, generating a draft escalation object mapped with status `PENDING_HUMAN_APPROVAL`.
+  3. The tool calls `POST /api/tickets/{ticketId}/escalations` on ticket-service (using the calling user's own forwarded token, not a separate service identity - see `AgentToolsConfig`'s class Javadoc), which persists a real `escalations` row with status `PENDING`. This has no effect on anything else yet.
   4. The AI informs the user: *"I have drafted an escalation request. A human agent will review and approve it shortly."*
-  5. An authorized human agent reviews the draft via the frontend UI and clicks "Approve". Only then does the backend permanently commit the escalation and trigger notifications.
+  5. An authorized human agent calls `PATCH /api/tickets/{ticketId}/escalations/{id}/approve` (agent/admin only) to commit it, or `.../reject` to decline it.
+
+  **Still pending**: there is no frontend UI for step 5 yet (only the API exists), and approval does not yet trigger any notification - both are natural follow-ups, not implemented in this pass.

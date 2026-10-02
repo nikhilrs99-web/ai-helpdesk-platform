@@ -166,12 +166,18 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       KEYCLOAK_ISSUER_URI: http://localhost:8080/realms/helpdesk
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/helpdesk/protocol/openid-connect/certs
+      TICKET_SERVICE_URL: http://ticket-service:8081
+      KB_SERVICE_URL: http://kb-service:8082
       OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo:4318
       OTEL_METRICS_EXPORTER: none
     depends_on:
       postgres:
         condition: service_healthy
       keycloak:
+        condition: service_started
+      ticket-service:
+        condition: service_started
+      kb-service:
         condition: service_started
 
   frontend:

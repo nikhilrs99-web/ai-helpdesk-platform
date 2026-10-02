@@ -2,6 +2,7 @@ package com.helpdesk.ticket.web;
 
 import com.helpdesk.common.dto.ApiError;
 import com.helpdesk.ticket.domain.state.IllegalTicketTransitionException;
+import com.helpdesk.ticket.exception.EscalationNotFoundException;
 import com.helpdesk.ticket.exception.MissingTicketMetadataException;
 import com.helpdesk.ticket.exception.TicketNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -20,6 +21,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(TicketNotFoundException.class)
     public ResponseEntity<ApiError> handleNotFound(TicketNotFoundException ex, HttpServletRequest request) {
+        return build(HttpStatus.NOT_FOUND, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(EscalationNotFoundException.class)
+    public ResponseEntity<ApiError> handleEscalationNotFound(EscalationNotFoundException ex, HttpServletRequest request) {
         return build(HttpStatus.NOT_FOUND, ex.getMessage(), request);
     }
 
