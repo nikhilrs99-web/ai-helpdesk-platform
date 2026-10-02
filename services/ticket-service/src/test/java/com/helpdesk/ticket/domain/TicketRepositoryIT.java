@@ -23,6 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Testcontainers
+@org.springframework.context.annotation.Import(com.helpdesk.ticket.config.JpaAuditingConfig.class)
 class TicketRepositoryIT {
 
     @Container

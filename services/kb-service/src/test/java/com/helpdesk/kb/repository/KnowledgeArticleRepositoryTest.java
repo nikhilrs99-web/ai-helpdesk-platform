@@ -17,6 +17,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest
 @Testcontainers
+@org.springframework.context.annotation.Import(com.helpdesk.kb.config.JpaAuditingConfig.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class KnowledgeArticleRepositoryTest {
 
