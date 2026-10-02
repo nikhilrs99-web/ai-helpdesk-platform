@@ -6,6 +6,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.context.annotation.Bean;
@@ -14,6 +15,9 @@ import org.springframework.http.MediaType;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.web.servlet.MockMvc;
+import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
@@ -35,11 +39,29 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * (null, for an unstubbed mock), so the fluent .prompt()... chain would NPE regardless of
  * what's stubbed afterwards. RealChatClientConfig pre-stubs it as part of the bean
  * definition itself, before the controller ever asks for it.
+ *
+ * @MockBean VectorStore replaces the pgvector-backed bean, but this is still a full
+ * @SpringBootTest - ai-service's own JPA/Flyway startup (V1__init_vector_store.sql etc.)
+ * still needs a real Postgres to connect to. Without one, this falls back to
+ * application.yml's default (localhost:5433), reachable only if a docker-compose Postgres
+ * happens to already be running on the host - the actual reason this failed in CI.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
 @Import(AiControllerTest.RealChatClientConfig.class)
+@Testcontainers
 class AiControllerTest {
+
+    // pgvector/pgvector, not plain postgres - V1__init_vector_store.sql runs CREATE EXTENSION
+    // vector, which a vanilla postgres image doesn't have available at all. Matches the image
+    // docker-compose.yml already uses for the same reason. DockerImageName.asCompatibleSubstituteFor
+    // tells Testcontainers this non-"postgres"-named image still speaks the Postgres protocol,
+    // so PostgreSQLContainer's own JDBC/wait-strategy logic keeps working.
+    @Container
+    @ServiceConnection
+    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>(
+            org.testcontainers.utility.DockerImageName.parse("pgvector/pgvector:pg16")
+                    .asCompatibleSubstituteFor("postgres"));
 
     @Autowired
     private MockMvc mockMvc;

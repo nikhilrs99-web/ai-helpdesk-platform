@@ -4,8 +4,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.springframework.kafka.test.context.EmbeddedKafka;
 import org.testcontainers.containers.KafkaContainer;
+import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
@@ -17,6 +17,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest
 @Testcontainers
 class OutboxWorkerTest {
+
+    // This is a full @SpringBootTest (not @DataJpaTest), so it boots ticket-service's entire
+    // context - Flyway/JPA included - and without its own Postgres, that falls back to
+    // application.yml's default (localhost:5433), which only exists if a docker-compose
+    // Postgres happens to already be running on the host. Declaring one here, the same way
+    // TicketRepositoryIT does, is what actually makes this test self-contained.
+    @Container
+    @ServiceConnection
+    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16");
 
     @Container
     @ServiceConnection
