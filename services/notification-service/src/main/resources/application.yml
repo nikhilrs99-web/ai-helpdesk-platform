@@ -2,6 +2,11 @@ server:
   port: 8084
 
 spring:
+  mail:
+    host: ${SMTP_HOST:localhost}
+    port: ${SMTP_PORT:1025}
+    username: ${SMTP_USER:}
+    password: ${SMTP_PASSWORD:}
   application:
     name: notification-service
   kafka:
@@ -12,6 +17,9 @@ spring:
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
 
 management:
+  health:
+    mail:
+      enabled: false
   endpoints:
     web:
       exposure:
@@ -20,3 +28,8 @@ management:
     health:
       show-details: always
 
+
+notification:
+  email:
+    from: ${NOTIFICATION_EMAIL_FROM:noreply@helpdesk.local}
+    to: ${NOTIFICATION_EMAIL_TO:support@helpdesk.local}

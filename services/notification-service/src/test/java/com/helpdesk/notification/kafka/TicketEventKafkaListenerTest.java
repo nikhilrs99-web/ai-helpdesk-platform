@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.helpdesk.common.enums.TicketCategory;
 import com.helpdesk.common.event.SlaBreachedEvent;
+import com.helpdesk.common.event.EscalationApprovedEvent;
 import com.helpdesk.common.event.TicketCreatedEvent;
 import com.helpdesk.notification.observer.NotificationDispatcher;
 import org.junit.jupiter.api.Test;
@@ -43,6 +44,13 @@ class TicketEventKafkaListenerTest {
         return objectMapper.writeValueAsString(event);
     }
 
+    private String escalationApprovedPayload(UUID eventId, UUID ticketId) throws Exception {
+        EscalationApprovedEvent event = new EscalationApprovedEvent(
+                eventId, EscalationApprovedEvent.CURRENT_VERSION, Instant.now(), ticketId,
+                UUID.randomUUID(), "Customer is very upset", "agent-1");
+        return objectMapper.writeValueAsString(event);
+    }
+
     @Test
     void ticketCreatedEventIsDispatchedExactlyOnce() throws Exception {
         NotificationDispatcher dispatcher = mock(NotificationDispatcher.class);
@@ -78,6 +86,17 @@ class TicketEventKafkaListenerTest {
         listener.handleTicketEvent(payload);
 
         verify(dispatcher, times(1)).dispatch(any(SlaBreachedEvent.class));
+    }
+
+    @Test
+    void escalationApprovedEventIsDispatched() throws Exception {
+        NotificationDispatcher dispatcher = mock(NotificationDispatcher.class);
+        TicketEventKafkaListener listener = new TicketEventKafkaListener(dispatcher, objectMapper);
+        String payload = escalationApprovedPayload(UUID.randomUUID(), UUID.randomUUID());
+
+        listener.handleTicketEvent(payload);
+
+        verify(dispatcher, times(1)).dispatch(any(EscalationApprovedEvent.class));
     }
 
     @Test

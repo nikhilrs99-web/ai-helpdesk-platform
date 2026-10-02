@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.helpdesk.common.event.DomainEvent;
 import com.helpdesk.common.event.SlaBreachedEvent;
+import com.helpdesk.common.event.EscalationApprovedEvent;
 import com.helpdesk.common.event.TicketCreatedEvent;
 import com.helpdesk.notification.observer.NotificationDispatcher;
 import org.slf4j.Logger;
@@ -27,7 +28,7 @@ public class TicketEventKafkaListener {
 
     // Every event's own eventType field is what actually routes it - reading this first,
     // separately from the concrete type, is what makes the switch below possible instead of
-    // the previous payload.contains("\"ticket.created\"") substring guess.
+    // a payload.contains("\"ticket.created\"") substring guess.
     @JsonIgnoreProperties(ignoreUnknown = true)
     private record EventEnvelope(String eventType) {}
 
@@ -47,6 +48,7 @@ public class TicketEventKafkaListener {
         DomainEvent event = switch (eventType) {
             case TicketCreatedEvent.EVENT_TYPE -> objectMapper.readValue(payload, TicketCreatedEvent.class);
             case SlaBreachedEvent.EVENT_TYPE -> objectMapper.readValue(payload, SlaBreachedEvent.class);
+            case EscalationApprovedEvent.EVENT_TYPE -> objectMapper.readValue(payload, EscalationApprovedEvent.class);
             // Forward-compatible on purpose (see docs/kafka/event-schema.md's versioning
             // policy): a future event type this consumer doesn't know about yet is ignored,
             // not an error.

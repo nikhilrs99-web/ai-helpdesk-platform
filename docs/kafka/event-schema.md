@@ -55,7 +55,21 @@ Published when a ticket misses its SLA target.
 | `slaType` | String | which SLA target was missed (e.g. first-response, resolution) |
 | `breachedAt` | Instant | when the breach was detected |
 
+### `escalation.approved` — `EscalationApprovedEvent`
+Published when an agent/admin approves a PENDING escalation (`PATCH /api/tickets/{ticketId}/escalations/{id}/approve`).
+
+| Field | Type | Notes |
+|---|---|---|
+| `eventId` | UUID | |
+| `version` | int | |
+| `occurredAt` | Instant | |
+| `ticketId` | UUID | |
+| `escalationId` | UUID | the escalation record that was approved |
+| `reason` | String | copied from the escalation, so a consumer doesn't need a second lookup |
+| `approvedBy` | String | Keycloak subject of the approving agent/admin |
+
 ## Partitioning (planned, Week 7)
-All three topics will be partitioned by `ticketId`, so every event about the same ticket lands on the
-same partition and is processed in order by a given consumer — without this, `ticket.updated` could be
-processed before `ticket.created` by a fast consumer on a different partition.
+All four event types share the single `ticket-events` topic, partitioned by `ticketId` - every event
+about the same ticket lands on the same partition and is processed in order by a given consumer, without
+which `ticket.updated` could be processed before `ticket.created` by a fast consumer on a different
+partition.
