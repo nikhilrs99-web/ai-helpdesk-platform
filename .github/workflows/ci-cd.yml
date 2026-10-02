@@ -12,6 +12,9 @@ env:
 
 jobs:
   build-test-scan:
+    env:
+      # Job-level so the Sonar step's if: can see whether a token exists.
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
