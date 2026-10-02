@@ -10,8 +10,8 @@ import com.helpdesk.ticket.security.TicketSecurity;
 import com.helpdesk.ticket.tickettype.TicketTypeHandlerFactory;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -49,31 +49,31 @@ class TicketControllerSecurityTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @MockitoBean
     private TicketRepository ticketRepository;
 
-    @MockBean
+    @MockitoBean
     private RoutingStrategy routingStrategy;
 
-    @MockBean
+    @MockitoBean
     private TicketTypeHandlerFactory typeHandlerFactory;
 
-    @MockBean
+    @MockitoBean
     private com.helpdesk.ticket.outbox.OutboxRepository outboxRepository;
 
-    @MockBean
+    @MockitoBean
     private com.helpdesk.ticket.redis.RateLimiterService rateLimiterService;
 
-    @MockBean
+    @MockitoBean
     private SlaRepository slaRepository;
 
-    @MockBean
+    @MockitoBean
     private com.helpdesk.ticket.repository.EscalationRepository escalationRepository;
 
     // Stops OAuth2ResourceServerAutoConfiguration from resolving a real JwtDecoder against the
     // configured Keycloak issuer-uri during context startup - SecurityMockMvcRequestPostProcessors
     // .jwt() injects a pre-authenticated principal directly and never decodes a real token.
-    @MockBean
+    @MockitoBean
     private JwtDecoder jwtDecoder;
 
     private Ticket ticketOwnedBy(String requesterId) {

@@ -1,6 +1,6 @@
 package com.helpdesk.ai;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -46,7 +46,7 @@ class RagEvaluationTest {
     private ChatClient.Builder chatClientBuilder;
 
     private List<GoldenQuery> loadDataset() throws Exception {
-        ObjectMapper mapper = new ObjectMapper();
+        ObjectMapper mapper = tools.jackson.databind.json.JsonMapper.builder().build();
         return List.of(mapper.readValue(
                 new ClassPathResource("eval-dataset.json").getInputStream(), GoldenQuery[].class));
     }

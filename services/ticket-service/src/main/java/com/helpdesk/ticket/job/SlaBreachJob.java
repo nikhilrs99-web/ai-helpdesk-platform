@@ -1,6 +1,6 @@
 package com.helpdesk.ticket.job;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.helpdesk.common.enums.TicketStatus;
 import com.helpdesk.common.event.SlaBreachedEvent;
 import com.helpdesk.ticket.domain.Sla;

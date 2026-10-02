@@ -4,8 +4,8 @@ import com.helpdesk.analytics.domain.TicketMetricRepository;
 import com.helpdesk.analytics.security.SecurityConfig;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
@@ -29,13 +29,13 @@ class AnalyticsControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @MockitoBean
     private TicketMetricRepository repository;
 
     // Stops OAuth2ResourceServerAutoConfiguration from resolving a real JwtDecoder against
     // the configured Keycloak issuer-uri during context startup - jwt() injects a
     // pre-authenticated principal directly and never decodes a real token.
-    @MockBean
+    @MockitoBean
     private JwtDecoder jwtDecoder;
 
     @Test

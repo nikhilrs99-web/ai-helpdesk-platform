@@ -15,14 +15,16 @@ spring:
           jwk-set-uri: http://localhost:8080/realms/helpdesk/protocol/openid-connect/certs
   cloud:
     gateway:
-      routes:
-        - id: ticket-service
-          # Fixed port so this file (loaded from the classpath, before the JVM starts)
-          # doesn't need to know the stub server's port in advance - the test starts its
-          # stub JDK HttpServer bound to this exact port before the Spring context loads.
-          uri: http://localhost:18089
-          predicates:
-            - Path=/api/tickets/**
+      server:
+        webflux:
+          routes:
+            - id: ticket-service
+              # Fixed port so this file (loaded from the classpath, before the JVM starts)
+              # doesn't need to know the stub server's port in advance - the test starts its
+              # stub JDK HttpServer bound to this exact port before the Spring context loads.
+              uri: http://localhost:18089
+              predicates:
+                - Path=/api/tickets/**
 management:
   endpoints:
     web:

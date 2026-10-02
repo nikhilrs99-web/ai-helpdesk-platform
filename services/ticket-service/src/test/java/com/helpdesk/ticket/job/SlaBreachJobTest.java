@@ -1,7 +1,6 @@
 package com.helpdesk.ticket.job;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import tools.jackson.databind.ObjectMapper;
 import com.helpdesk.common.enums.TicketCategory;
 import com.helpdesk.ticket.domain.BaseEntity;
 import com.helpdesk.ticket.domain.Sla;
@@ -32,7 +31,7 @@ import static org.mockito.Mockito.when;
  */
 class SlaBreachJobTest {
 
-    private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
+    private final ObjectMapper objectMapper = tools.jackson.databind.json.JsonMapper.builder().build();
 
     private Ticket ticketCreatedAt(Instant createdAt, TicketCategory category) throws Exception {
         Ticket ticket = new Ticket();

@@ -17,15 +17,24 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <spring-boot.version>3.3.4</spring-boot.version>
+        <spring-boot.version>4.1.1</spring-boot.version>
         <maven-failsafe-plugin.version>3.6.0</maven-failsafe-plugin.version>
         <!-- Boot's managed 1.19.8 cannot talk to Docker 29+ (API too old), so every Testcontainers test fails to find Docker. -->
         <testcontainers.version>1.21.4</testcontainers.version>
+        <opentelemetry-instrumentation.version>2.31.1</opentelemetry-instrumentation.version>
     </properties>
 
     <dependencyManagement>
         <dependencies>
             <!-- Must come before the Spring Boot BOM so it wins: Boot's managed 1.19.8 cannot talk to Docker 29+. -->
+            <!-- Aligns opentelemetry-api/sdk with the instrumentation starter; Boot's managed OTel is older and breaks with NoClassDefFoundError: InstrumentationUtil. -->
+            <dependency>
+                <groupId>io.opentelemetry.instrumentation</groupId>
+                <artifactId>opentelemetry-instrumentation-bom</artifactId>
+                <version>${opentelemetry-instrumentation.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
             <dependency>
                 <groupId>org.testcontainers</groupId>
                 <artifactId>testcontainers-bom</artifactId>

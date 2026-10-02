@@ -1,7 +1,6 @@
 package com.helpdesk.ticket.web;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import tools.jackson.databind.ObjectMapper;
 import com.helpdesk.ticket.domain.Escalation;
 import com.helpdesk.ticket.domain.EscalationStatus;
 import com.helpdesk.ticket.outbox.OutboxEvent;
@@ -27,7 +26,7 @@ import static org.mockito.Mockito.when;
  */
 class EscalationControllerTest {
 
-    private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
+    private final ObjectMapper objectMapper = tools.jackson.databind.json.JsonMapper.builder().build();
 
     private Escalation pendingEscalation(UUID ticketId) {
         Escalation escalation = new Escalation();

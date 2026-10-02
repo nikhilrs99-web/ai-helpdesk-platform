@@ -6,8 +6,8 @@ import com.helpdesk.kb.repository.KnowledgeArticleRepository;
 import com.helpdesk.kb.security.SecurityConfig;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -40,13 +40,13 @@ class KnowledgeArticleControllerSecurityTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @MockitoBean
     private KnowledgeArticleRepository repository;
 
     // Stops OAuth2ResourceServerAutoConfiguration from resolving a real JwtDecoder against
     // the configured Keycloak issuer-uri during context startup - jwt() injects a
     // pre-authenticated principal directly and never decodes a real token.
-    @MockBean
+    @MockitoBean
     private JwtDecoder jwtDecoder;
 
     private String articlePayload() {
