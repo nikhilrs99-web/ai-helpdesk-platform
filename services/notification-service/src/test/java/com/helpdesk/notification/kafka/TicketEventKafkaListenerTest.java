@@ -1,8 +1,10 @@
 package com.helpdesk.notification.kafka;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.helpdesk.common.enums.TicketCategory;
+import com.helpdesk.common.event.SlaBreachedEvent;
 import com.helpdesk.common.event.TicketCreatedEvent;
 import com.helpdesk.notification.observer.NotificationDispatcher;
 import org.junit.jupiter.api.Test;
@@ -10,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import java.time.Instant;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -30,6 +33,13 @@ class TicketEventKafkaListenerTest {
         TicketCreatedEvent event = new TicketCreatedEvent(
                 eventId, TicketCreatedEvent.CURRENT_VERSION, Instant.now(), ticketId,
                 TicketCategory.ACCESS, "requester-1");
+        return objectMapper.writeValueAsString(event);
+    }
+
+    private String slaBreachedPayload(UUID eventId, UUID ticketId) throws Exception {
+        SlaBreachedEvent event = new SlaBreachedEvent(
+                eventId, SlaBreachedEvent.CURRENT_VERSION, Instant.now(), ticketId,
+                "FIRST_RESPONSE", Instant.now());
         return objectMapper.writeValueAsString(event);
     }
 
@@ -60,24 +70,38 @@ class TicketEventKafkaListenerTest {
     }
 
     @Test
-    void unsupportedEventTypeIsIgnored() {
+    void slaBreachedEventIsDispatched() throws Exception {
+        NotificationDispatcher dispatcher = mock(NotificationDispatcher.class);
+        TicketEventKafkaListener listener = new TicketEventKafkaListener(dispatcher, objectMapper);
+        String payload = slaBreachedPayload(UUID.randomUUID(), UUID.randomUUID());
+
+        listener.handleTicketEvent(payload);
+
+        verify(dispatcher, times(1)).dispatch(any(SlaBreachedEvent.class));
+    }
+
+    @Test
+    void unsupportedEventTypeIsIgnored() throws Exception {
         NotificationDispatcher dispatcher = mock(NotificationDispatcher.class);
         TicketEventKafkaListener listener = new TicketEventKafkaListener(dispatcher, objectMapper);
 
-        listener.handleTicketEvent("{\"eventType\": \"sla.breached\", \"ticketId\": \"whatever\"}");
+        // A real, well-formed event but of a type this consumer doesn't know about yet -
+        // forward-compatible per docs/kafka/event-schema.md's versioning policy, not an error.
+        listener.handleTicketEvent("{\"eventType\": \"some.future.event\", \"eventId\": \"" + UUID.randomUUID() + "\"}");
 
         verify(dispatcher, never()).dispatch(any());
     }
 
     @Test
-    void malformedPayloadIsSwallowedAndNeverReachesTheDispatcher() {
+    void malformedPayloadPropagatesInsteadOfBeingSwallowed() {
         NotificationDispatcher dispatcher = mock(NotificationDispatcher.class);
         TicketEventKafkaListener listener = new TicketEventKafkaListener(dispatcher, objectMapper);
 
-        // Contains the ticket.created marker the listener string-matches on, but isn't valid
-        // TicketCreatedEvent JSON - proves the parse failure is caught, not just the branch
-        // that never gets there.
-        listener.handleTicketEvent("{\"eventType\": \"ticket.created\", not even valid json");
+        // Previously this was caught and logged, so KafkaConfig's DefaultErrorHandler +
+        // DeadLetterPublishingRecoverer never got a chance to run. Now it has to propagate for
+        // that retry/DLQ machinery to actually engage.
+        assertThatThrownBy(() -> listener.handleTicketEvent("{\"eventType\": \"ticket.created\", not even valid json"))
+                .isInstanceOf(JsonProcessingException.class);
 
         verify(dispatcher, never()).dispatch(any());
     }

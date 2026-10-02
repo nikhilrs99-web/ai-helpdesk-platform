@@ -2,6 +2,7 @@ package com.helpdesk.notification.observer;
 
 import com.helpdesk.common.enums.TicketCategory;
 import com.helpdesk.common.event.DomainEvent;
+import com.helpdesk.common.event.SlaBreachedEvent;
 import com.helpdesk.common.event.TicketCreatedEvent;
 import org.junit.jupiter.api.Test;
 
@@ -22,6 +23,15 @@ class EmailNotifierTest {
                 TicketCategory.ACCESS, "requester-1");
 
         assertThat(notifier.supports(event)).isTrue();
+    }
+
+    @Test
+    void supportsSlaBreachedEvents() {
+        SlaBreachedEvent event = new SlaBreachedEvent(UUID.randomUUID(), SlaBreachedEvent.CURRENT_VERSION,
+                Instant.now(), UUID.randomUUID(), "FIRST_RESPONSE", Instant.now());
+
+        assertThat(notifier.supports(event)).isTrue();
+        assertThatCode(() -> notifier.notify(event)).doesNotThrowAnyException();
     }
 
     @Test
