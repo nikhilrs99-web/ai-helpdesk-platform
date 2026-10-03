@@ -65,6 +65,10 @@ class GatewaySecurityAndRoutingTest {
             exchange.getResponseBody().write(body);
             exchange.close();
         });
+        stubBackend.createContext("/api/agents/ping", exchange -> {
+            exchange.sendResponseHeaders(204, -1);
+            exchange.close();
+        });
         stubBackend.start();
     }
 
@@ -88,6 +92,16 @@ class GatewaySecurityAndRoutingTest {
                 .expectStatus().isOk()
                 .expectBody()
                 .jsonPath("$.from").isEqualTo("stub-ticket-service");
+    }
+
+    @Test
+    void agentPresencePingIsRoutedToTheTicketService() {
+        // /api/agents/** is served by ticket-service; without a route here the gateway returned
+        // 404 and every agent showed as Offline in the UI.
+        securedClient().mutateWith(mockJwt())
+                .post().uri("/api/agents/ping")
+                .exchange()
+                .expectStatus().isNoContent();
     }
 
     @Test

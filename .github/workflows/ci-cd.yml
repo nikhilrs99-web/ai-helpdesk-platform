@@ -76,6 +76,31 @@ jobs:
           -Dsonar.host.url=${{ vars.SONAR_HOST_URL || 'https://sonarcloud.io' }}
           ${{ vars.SONAR_ORGANIZATION && format('-Dsonar.organization={0}', vars.SONAR_ORGANIZATION) || '' }}
 
+  # Builds (does not push) every image on pull requests. Image builds only happened on main
+  # with AWS enabled, so a broken Dockerfile (e.g. a COPY of a file a PR deleted) used to be
+  # invisible until after merge.
+  docker-build-check:
+    needs: build-test-scan
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { service: ticket-service, context: ., dockerfile: services/ticket-service/Dockerfile }
+          - { service: kb-service, context: ., dockerfile: services/kb-service/Dockerfile }
+          - { service: ai-service, context: ., dockerfile: services/ai-service/Dockerfile }
+          - { service: notification-service, context: ., dockerfile: services/notification-service/Dockerfile }
+          - { service: analytics-service, context: ., dockerfile: services/analytics-service/Dockerfile }
+          - { service: api-gateway, context: ., dockerfile: services/api-gateway/Dockerfile }
+          - { service: frontend, context: ./frontend, dockerfile: frontend/Dockerfile }
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Build ${{ matrix.service }} image
+        run: docker build -f ${{ matrix.dockerfile }} -t helpdesk/${{ matrix.service }}:pr-check ${{ matrix.context }}
+
   # Set repo variable AWS_DEPLOY_ENABLED=true once AWS secrets and ECR exist; until then image push
   # and GitOps update are skipped instead of failing main on missing credentials.
   docker-build-push:
