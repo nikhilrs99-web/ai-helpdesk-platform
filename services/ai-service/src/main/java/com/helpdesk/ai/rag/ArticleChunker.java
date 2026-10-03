@@ -16,7 +16,7 @@ import java.util.Map;
 @Component
 public class ArticleChunker {
 
-    private final TokenTextSplitter splitter = new TokenTextSplitter(400, 100, 5, 10000, true);
+    private final TokenTextSplitter splitter = TokenTextSplitter.builder().withChunkSize(400).withMinChunkSizeChars(100).withMinChunkLengthToEmbed(5).withMaxNumChunks(10000).withKeepSeparator(true).build();
 
     public List<Document> chunk(String id, String title, String content) {
         Document whole = new Document(content, new HashMap<>(Map.of("id", id, "title", title)));

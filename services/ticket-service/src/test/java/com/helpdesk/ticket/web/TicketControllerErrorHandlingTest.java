@@ -14,9 +14,9 @@ import com.helpdesk.ticket.tickettype.TicketTypeHandlerFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
@@ -52,25 +52,25 @@ class TicketControllerErrorHandlingTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @MockitoBean
     private TicketRepository ticketRepository;
 
-    @MockBean
+    @MockitoBean
     private RoutingStrategy routingStrategy;
 
-    @MockBean
+    @MockitoBean
     private com.helpdesk.ticket.outbox.OutboxRepository outboxRepository;
 
-    @MockBean
+    @MockitoBean
     private com.helpdesk.ticket.redis.RateLimiterService rateLimiterService;
 
-    @MockBean
+    @MockitoBean
     private SlaRepository slaRepository;
 
-    @MockBean
+    @MockitoBean
     private com.helpdesk.ticket.repository.EscalationRepository escalationRepository;
 
-    // A bare @MockBean returns false for isAllowed(), which would 429 every request in this
+    // A bare @MockitoBean returns false for isAllowed(), which would 429 every request in this
     // class before the status-mapping logic under test ever runs - these tests aren't about
     // rate limiting, so keep it out of the way.
     @BeforeEach
@@ -80,7 +80,7 @@ class TicketControllerErrorHandlingTest {
 
     // Stops OAuth2ResourceServerAutoConfiguration from resolving a real JwtDecoder against the
     // configured Keycloak issuer-uri during context startup - see TicketControllerSecurityTest.
-    @MockBean
+    @MockitoBean
     private JwtDecoder jwtDecoder;
 
     // Real handlers, not mocked - the BUG-missing-metadata test needs BugTicketHandler's actual

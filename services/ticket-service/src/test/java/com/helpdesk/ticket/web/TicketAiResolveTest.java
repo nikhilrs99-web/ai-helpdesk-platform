@@ -1,7 +1,6 @@
 package com.helpdesk.ticket.web;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import tools.jackson.databind.ObjectMapper;
 import com.helpdesk.common.enums.TicketStatus;
 import com.helpdesk.ticket.domain.Escalation;
 import com.helpdesk.ticket.domain.Ticket;
@@ -33,7 +32,7 @@ class TicketAiResolveTest {
     private final EscalationRepository escalationRepository = mock(EscalationRepository.class);
     private final OutboxRepository outboxRepository = mock(OutboxRepository.class);
     private final TicketController controller = new TicketController(ticketRepository, null, null,
-            outboxRepository, new ObjectMapper().registerModule(new JavaTimeModule()), null,
+            outboxRepository, tools.jackson.databind.json.JsonMapper.builder().build(), null,
             mock(SlaRepository.class), escalationRepository);
 
     private Ticket openTicket(UUID id) {

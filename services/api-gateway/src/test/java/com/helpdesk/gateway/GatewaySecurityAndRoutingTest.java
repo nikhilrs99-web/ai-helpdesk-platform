@@ -5,9 +5,9 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
+import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
 import java.io.IOException;
@@ -26,7 +26,7 @@ import static org.springframework.security.test.web.reactive.server.SecurityMock
  * e.g. its predicates - Spring Cloud Gateway's route list binding doesn't merge partial
  * overrides across property sources the way plain @ConfigurationProperties does.)
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK) // MOCK: Boot 4 only lets security mutators (mockJwt) bind to a mock-bound WebTestClient
 @AutoConfigureWebTestClient
 class GatewaySecurityAndRoutingTest {
 
@@ -35,11 +35,22 @@ class GatewaySecurityAndRoutingTest {
     @Autowired
     private WebTestClient webTestClient;
 
+    @Autowired
+    private org.springframework.context.ApplicationContext applicationContext;
+
+    // Boot 4 no longer wires Spring Security's mock-server support into the auto-configured
+    // client, so bind one to the context ourselves for the mockJwt() tests.
+    private WebTestClient securedClient() {
+        return WebTestClient.bindToApplicationContext(applicationContext)
+                .apply(org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers.springSecurity())
+                .configureClient().build();
+    }
+
     // Replaces the auto-configured decoder that would otherwise try to reach the real
     // Keycloak (jwk-set-uri) at request time - mockJwt() injects an authenticated principal
     // directly into the security context and never calls this, but the bean still has to
     // exist for the context to start without a reachable issuer.
-    @MockBean
+    @MockitoBean
     private org.springframework.security.oauth2.jwt.ReactiveJwtDecoder jwtDecoder;
 
     private static final int STUB_PORT = 18089;
@@ -71,7 +82,7 @@ class GatewaySecurityAndRoutingTest {
 
     @Test
     void protectedRouteForwardsAnAuthenticatedRequestToTheBackend() {
-        webTestClient.mutateWith(mockJwt())
+        securedClient().mutateWith(mockJwt())
                 .get().uri("/api/tickets/hello")
                 .exchange()
                 .expectStatus().isOk()

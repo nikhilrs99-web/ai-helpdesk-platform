@@ -58,7 +58,7 @@ export default function Dashboard() {
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
             <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b' }} />
             <YAxis unit="%" axisLine={false} tickLine={false} tick={{ fill: '#64748b' }} />
-            <Tooltip formatter={(value: number) => `${value}%`} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+            <Tooltip formatter={(value) => `${value}%`} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
             <Bar dataKey="value" radius={[6, 6, 0, 0]}>
               {chartData.map((entry) => (
                 <Cell key={entry.name} fill={entry.fill} />

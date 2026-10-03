@@ -48,8 +48,7 @@ class TicketControllerRoutingTest {
         TicketTypeHandlerFactory typeHandlerFactory = new TicketTypeHandlerFactory(
                 List.of(new BugTicketHandler(), new BillingTicketHandler(), new DefaultTicketTypeHandler()));
         com.helpdesk.ticket.outbox.OutboxRepository outboxRepository = mock(com.helpdesk.ticket.outbox.OutboxRepository.class);
-        com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper()
-                .registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
+        tools.jackson.databind.ObjectMapper objectMapper = tools.jackson.databind.json.JsonMapper.builder().build();
         com.helpdesk.ticket.redis.RateLimiterService rateLimiterService = mock(com.helpdesk.ticket.redis.RateLimiterService.class);
         when(rateLimiterService.isAllowed(any())).thenReturn(true);
         com.helpdesk.ticket.repository.SlaRepository slaRepository = mock(com.helpdesk.ticket.repository.SlaRepository.class);

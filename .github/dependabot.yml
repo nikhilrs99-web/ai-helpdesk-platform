@@ -31,3 +31,11 @@ updates:
       - "/frontend"
     schedule:
       interval: "weekly"
+    # Services target Java 21 (LTS); don't propose Java 24/25 base images or newer Maven images.
+    ignore:
+      - dependency-name: "eclipse-temurin"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "maven"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]

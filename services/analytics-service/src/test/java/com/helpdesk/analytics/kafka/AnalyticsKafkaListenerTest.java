@@ -1,7 +1,6 @@
 package com.helpdesk.analytics.kafka;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import tools.jackson.databind.ObjectMapper;
 import com.helpdesk.analytics.domain.TicketMetric;
 import com.helpdesk.analytics.domain.TicketMetricRepository;
 import com.helpdesk.common.enums.TicketCategory;
@@ -28,7 +27,7 @@ import static org.mockito.Mockito.when;
  */
 class AnalyticsKafkaListenerTest {
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = tools.jackson.databind.json.JsonMapper.builder().build();
 
     @Test
     void ticketCreatedEventCreatesNewMetricWithCategoryAndOpenStatus() {
@@ -58,7 +57,7 @@ class AnalyticsKafkaListenerTest {
         // TicketController -> OutboxWorker -> Kafka payload (a real bug this test would have
         // caught immediately). This one goes through the same ObjectMapper.writeValueAsString
         // call the producer actually uses, so it fails the moment that wire format regresses.
-        ObjectMapper realObjectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
+        ObjectMapper realObjectMapper = tools.jackson.databind.json.JsonMapper.builder().build();
         UUID ticketId = UUID.randomUUID();
         TicketCreatedEvent event = new TicketCreatedEvent(UUID.randomUUID(),
                 TicketCreatedEvent.CURRENT_VERSION, Instant.now(), ticketId,

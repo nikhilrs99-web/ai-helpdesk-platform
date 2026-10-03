@@ -1,8 +1,8 @@
 package com.helpdesk.notification.kafka;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import com.helpdesk.common.event.DomainEvent;
 import com.helpdesk.common.event.SlaBreachedEvent;
 import com.helpdesk.common.event.EscalationApprovedEvent;
@@ -42,7 +42,7 @@ public class TicketEventKafkaListener {
     // configured in KafkaConfig can actually retry and DLQ it - that machinery was configured
     // but unreachable before, since nothing ever escaped this method.
     @KafkaListener(topics = "ticket-events", groupId = "notification-group")
-    public void handleTicketEvent(String payload) throws JsonProcessingException {
+    public void handleTicketEvent(String payload) throws JacksonException {
         String eventType = objectMapper.readValue(payload, EventEnvelope.class).eventType();
 
         DomainEvent event = switch (eventType) {

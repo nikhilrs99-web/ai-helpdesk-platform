@@ -39,7 +39,7 @@ public class TicketController {
     private final RoutingStrategy routingStrategy;
     private final TicketTypeHandlerFactory typeHandlerFactory;
     private final com.helpdesk.ticket.outbox.OutboxRepository outboxRepository;
-    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+    private final tools.jackson.databind.ObjectMapper objectMapper;
     private final com.helpdesk.ticket.redis.RateLimiterService rateLimiterService;
     private final SlaRepository slaRepository;
     private final com.helpdesk.ticket.repository.EscalationRepository escalationRepository;
@@ -47,7 +47,7 @@ public class TicketController {
     public TicketController(TicketRepository ticketRepository, RoutingStrategy routingStrategy,
                              TicketTypeHandlerFactory typeHandlerFactory,
                              com.helpdesk.ticket.outbox.OutboxRepository outboxRepository,
-                             com.fasterxml.jackson.databind.ObjectMapper objectMapper,
+                             tools.jackson.databind.ObjectMapper objectMapper,
                              com.helpdesk.ticket.redis.RateLimiterService rateLimiterService,
                              SlaRepository slaRepository,
                              com.helpdesk.ticket.repository.EscalationRepository escalationRepository) {

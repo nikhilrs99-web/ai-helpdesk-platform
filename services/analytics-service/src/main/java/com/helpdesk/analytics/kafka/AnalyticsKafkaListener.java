@@ -1,7 +1,7 @@
 package com.helpdesk.analytics.kafka;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.helpdesk.analytics.domain.TicketMetric;
 import com.helpdesk.analytics.domain.TicketMetricRepository;
 import org.slf4j.Logger;

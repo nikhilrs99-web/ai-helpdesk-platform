@@ -10,7 +10,7 @@ import com.helpdesk.ticket.repository.EscalationRepository;
 import com.helpdesk.ticket.repository.TicketRepository;
 import com.helpdesk.ticket.web.dto.CreateEscalationRequest;
 import com.helpdesk.ticket.web.dto.EscalationResponse;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;

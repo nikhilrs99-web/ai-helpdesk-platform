@@ -1,8 +1,7 @@
 package com.helpdesk.notification.kafka;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import com.helpdesk.common.enums.TicketCategory;
 import com.helpdesk.common.event.SlaBreachedEvent;
 import com.helpdesk.common.event.EscalationApprovedEvent;
@@ -28,7 +27,7 @@ import static org.mockito.Mockito.verify;
  */
 class TicketEventKafkaListenerTest {
 
-    private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
+    private final ObjectMapper objectMapper = tools.jackson.databind.json.JsonMapper.builder().build();
 
     private String ticketCreatedPayload(UUID eventId, UUID ticketId) throws Exception {
         TicketCreatedEvent event = new TicketCreatedEvent(
@@ -120,7 +119,7 @@ class TicketEventKafkaListenerTest {
         // DeadLetterPublishingRecoverer never got a chance to run. Now it has to propagate for
         // that retry/DLQ machinery to actually engage.
         assertThatThrownBy(() -> listener.handleTicketEvent("{\"eventType\": \"ticket.created\", not even valid json"))
-                .isInstanceOf(JsonProcessingException.class);
+                .isInstanceOf(JacksonException.class);
 
         verify(dispatcher, never()).dispatch(any());
     }

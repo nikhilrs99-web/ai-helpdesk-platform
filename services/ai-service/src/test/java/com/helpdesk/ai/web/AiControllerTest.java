@@ -2,10 +2,10 @@ package com.helpdesk.ai.web;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.vectorstore.VectorStore;
@@ -34,13 +34,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  *
  * AiController calls chatClientBuilder.build() once, in its constructor, at bean creation
  * time - which happens once when the (cached) Spring context is first built, before any
- * @Test method runs. A plain @MockBean stubbed inside a test method is too late: the
+ * @Test method runs. A plain @MockitoBean stubbed inside a test method is too late: the
  * controller singleton has already captured whatever build() returned the first time
  * (null, for an unstubbed mock), so the fluent .prompt()... chain would NPE regardless of
  * what's stubbed afterwards. RealChatClientConfig pre-stubs it as part of the bean
  * definition itself, before the controller ever asks for it.
  *
- * @MockBean VectorStore replaces the pgvector-backed bean, but this is still a full
+ * @MockitoBean VectorStore replaces the pgvector-backed bean, but this is still a full
  * @SpringBootTest - ai-service's own JPA/Flyway startup (V1__init_vector_store.sql etc.)
  * still needs a real Postgres to connect to. Without one, this falls back to
  * application.yml's default (localhost:5433), reachable only if a docker-compose Postgres
@@ -66,13 +66,13 @@ class AiControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @MockitoBean
     private VectorStore vectorStore;
 
     // Stops OAuth2ResourceServerAutoConfiguration from resolving a real JwtDecoder against
     // the configured Keycloak issuer-uri during context startup - jwt() injects a
     // pre-authenticated principal directly and never decodes a real token.
-    @MockBean
+    @MockitoBean
     private JwtDecoder jwtDecoder;
 
     @TestConfiguration

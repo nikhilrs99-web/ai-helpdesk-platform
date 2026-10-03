@@ -16,28 +16,30 @@ spring:
           jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://localhost:8080/realms/helpdesk/protocol/openid-connect/certs}
   cloud:
     gateway:
-      routes:
-        - id: ticket-service
-          uri: http://ticket-service:8081
-          predicates:
-            - Path=/api/tickets/**
-        - id: kb-service
-          uri: http://kb-service:8082
-          predicates:
-            - Path=/api/articles/**
-        - id: notification-service
-          uri: http://notification-service:8084
-          predicates:
-            - Path=/api/notifications/**
+      server:
+        webflux:
+          routes:
+            - id: ticket-service
+              uri: http://ticket-service:8081
+              predicates:
+                - Path=/api/tickets/**
+            - id: kb-service
+              uri: http://kb-service:8082
+              predicates:
+                - Path=/api/articles/**
+            - id: notification-service
+              uri: http://notification-service:8084
+              predicates:
+                - Path=/api/notifications/**
 
-        - id: ai-service
-          uri: http://ai-service:8083
-          predicates:
-            - Path=/api/ai/**
-        - id: analytics-service
-          uri: http://analytics-service:8085
-          predicates:
-            - Path=/api/analytics/**
+            - id: ai-service
+              uri: http://ai-service:8083
+              predicates:
+                - Path=/api/ai/**
+            - id: analytics-service
+              uri: http://analytics-service:8085
+              predicates:
+                - Path=/api/analytics/**
 management:
   endpoints:
     web:

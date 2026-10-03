@@ -1,12 +1,14 @@
 package com.helpdesk.ai.web;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.helpdesk.ai.llm.LlmGuard;
 import com.helpdesk.ai.rag.ArticleChunker;
 import com.helpdesk.ai.rag.HybridRetriever;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.document.Document;
+import org.springframework.ai.tool.ToolCallback;
+import org.springframework.ai.tool.resolution.ToolCallbackResolver;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
 import org.springframework.http.HttpStatus;
@@ -28,16 +30,18 @@ public class AiController {
     private final ArticleChunker chunker;
     private final LlmGuard llmGuard;
     private final ObjectMapper objectMapper;
+    private final ToolCallbackResolver toolResolver;
 
     public AiController(ChatClient.Builder chatClientBuilder, VectorStore vectorStore,
                         HybridRetriever retriever, ArticleChunker chunker, LlmGuard llmGuard,
-                        ObjectMapper objectMapper) {
+                        ObjectMapper objectMapper, ToolCallbackResolver toolResolver) {
         this.chatClient = chatClientBuilder.build();
         this.vectorStore = vectorStore;
         this.retriever = retriever;
         this.chunker = chunker;
         this.llmGuard = llmGuard;
         this.objectMapper = objectMapper;
+        this.toolResolver = toolResolver;
     }
 
     @PostMapping("/rag/search")
@@ -105,15 +109,17 @@ public class AiController {
         return llmGuard.call(() -> chatClient.prompt()
                 .system("You are an autonomous support agent. Use the provided tools to fetch ticket details, SLA status, customer history, or search the KB. If a user asks to escalate, you MUST use the createEscalation tool and inform them it is pending human approval. Only call resolveTicket when your answer fully handled the request and the user confirms nothing else is needed.")
                 .user(userMessage)
-                .toolNames(
-                        "getTicketStatus",
-                        "searchKnowledgeBase",
-                        "getSLAStatus",
-                        "getCustomerTickets",
-                        "createEscalation",
-                        "resolveTicket"
-                )
+                .toolCallbacks(agentTools())
                 .call()
                 .content());
+    }
+
+    // Spring AI 2 dropped by-name tool selection on the request; resolve the Function-bean
+    // tools declared in AgentToolsConfig to callbacks explicitly.
+    private List<ToolCallback> agentTools() {
+        return List.of(
+                "getTicketStatus", "searchKnowledgeBase", "getSLAStatus",
+                "getCustomerTickets", "createEscalation", "resolveTicket")
+                .stream().map(toolResolver::resolve).toList();
     }
 }
