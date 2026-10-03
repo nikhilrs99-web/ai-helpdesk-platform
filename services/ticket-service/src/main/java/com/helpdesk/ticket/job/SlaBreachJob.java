@@ -81,7 +81,8 @@ public class SlaBreachJob {
                 Instant.now(),
                 ticket.getId(),
                 SLA_TYPE,
-                deadline
+                deadline,
+                ticket.getRequesterEmail()
         );
 
         try {

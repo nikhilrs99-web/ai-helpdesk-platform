@@ -75,6 +75,7 @@ public class TicketController {
         ticket.setDescription(request.description());
         ticket.setCategory(request.category());
         ticket.setRequesterId(userId);
+        ticket.setRequesterEmail(jwt.getClaimAsString("email"));
         ticket.setRoutedTeam(routingStrategy.determineTeam(ticket));
 
         // Validates + populates category-specific metadata (Factory pattern); throws
@@ -92,7 +93,8 @@ public class TicketController {
                     java.time.Instant.now(),
                     saved.getId(),
                     saved.getCategory(),
-                    saved.getRequesterId()
+                    saved.getRequesterId(),
+                    saved.getRequesterEmail()
             );
             
             String payload = objectMapper.writeValueAsString(event);

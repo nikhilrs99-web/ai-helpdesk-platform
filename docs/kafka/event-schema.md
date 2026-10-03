@@ -30,6 +30,7 @@ Published when a new ticket is created.
 | `ticketId` | UUID | the ticket this event is about |
 | `category` | TicketCategory | BUG / BILLING / ACCESS / HOW_TO / FEATURE_REQUEST |
 | `requesterId` | String | Keycloak subject of the user who raised it |
+| `requesterEmail` | String | optional - JWT email claim at creation; consumers must tolerate null |
 
 ### `ticket.updated` — `TicketUpdatedEvent`
 Published when a ticket's status changes (by an agent/admin via PATCH status, or by the AI agent via `POST /api/tickets/{id}/ai-resolve`). analytics-service uses `aiResolved` for the AI resolution rate.

@@ -20,8 +20,14 @@ public record EscalationApprovedEvent(
         UUID ticketId,
         UUID escalationId,
         String reason,
-        String approvedBy
+        String approvedBy,
+        String requesterEmail
 ) implements DomainEvent {
+
+    public EscalationApprovedEvent(UUID eventId, int version, Instant occurredAt, UUID ticketId,
+                                   UUID escalationId, String reason, String approvedBy) {
+        this(eventId, version, occurredAt, ticketId, escalationId, reason, approvedBy, null);
+    }
 
     public static final int CURRENT_VERSION = 1;
     public static final String EVENT_TYPE = "escalation.approved";

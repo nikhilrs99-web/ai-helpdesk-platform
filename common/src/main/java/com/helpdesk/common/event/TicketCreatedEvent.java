@@ -22,8 +22,15 @@ public record TicketCreatedEvent(
         Instant occurredAt,
         UUID ticketId,
         TicketCategory category,
-        String requesterId
+        String requesterId,
+        String requesterEmail
 ) implements DomainEvent {
+
+    /** requesterEmail is optional (added after v1 shipped; consumers must tolerate null). */
+    public TicketCreatedEvent(UUID eventId, int version, Instant occurredAt, UUID ticketId,
+                              TicketCategory category, String requesterId) {
+        this(eventId, version, occurredAt, ticketId, category, requesterId, null);
+    }
 
     public static final int CURRENT_VERSION = 1;
     public static final String EVENT_TYPE = "ticket.created";

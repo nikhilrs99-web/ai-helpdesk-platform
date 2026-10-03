@@ -12,11 +12,13 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Component;
 
 /**
- * Sends a real email over SMTP (MailHog locally, any SMTP relay elsewhere - see
- * spring.mail.* and notification.email.* in application.yml). Events carry only ids, not
- * addresses, so every message goes to one configured support mailbox rather than to the
- * individual requester; resolving per-user addresses needs a user-lookup call and is a
- * separate change.
+ * Sends real email over SMTP (MailHog locally, any SMTP relay elsewhere - see spring.mail.*
+ * and notification.email.* in application.yml).
+ *
+ * Recipients: the support mailbox always gets a copy; the requester additionally gets the
+ * customer-facing events (ticket created, escalation approved) when the event carries their
+ * address (taken from the JWT "email" claim at ticket creation). SLA breaches are internal,
+ * so they go to support only.
  */
 @Component
 public class EmailNotifier implements NotificationObserver {
@@ -25,14 +27,14 @@ public class EmailNotifier implements NotificationObserver {
 
     private final JavaMailSender mailSender;
     private final String from;
-    private final String to;
+    private final String supportMailbox;
 
     public EmailNotifier(JavaMailSender mailSender,
                          @Value("${notification.email.from}") String from,
-                         @Value("${notification.email.to}") String to) {
+                         @Value("${notification.email.to}") String supportMailbox) {
         this.mailSender = mailSender;
         this.from = from;
-        this.to = to;
+        this.supportMailbox = supportMailbox;
     }
 
     @Override
@@ -46,9 +48,10 @@ public class EmailNotifier implements NotificationObserver {
     public void notify(DomainEvent event) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(from);
-        message.setTo(to);
+        String requesterEmail = null;
 
         if (event instanceof TicketCreatedEvent e) {
+            requesterEmail = e.requesterEmail();
             message.setSubject("[Helpdesk] New ticket " + e.ticketId());
             message.setText("A new " + e.category() + " ticket was created by " + e.requesterId()
                     + ".\nTicket: " + e.ticketId());
@@ -57,6 +60,7 @@ public class EmailNotifier implements NotificationObserver {
             message.setText(e.slaType() + " SLA was breached at " + e.breachedAt()
                     + ".\nTicket: " + e.ticketId());
         } else if (event instanceof EscalationApprovedEvent e) {
+            requesterEmail = e.requesterEmail();
             message.setSubject("[Helpdesk] Escalation approved for ticket " + e.ticketId());
             message.setText("Escalation " + e.escalationId() + " was approved by " + e.approvedBy()
                     + ".\nReason: " + e.reason() + "\nTicket: " + e.ticketId());
@@ -64,7 +68,14 @@ public class EmailNotifier implements NotificationObserver {
             return;
         }
 
+        if (requesterEmail != null && !requesterEmail.isBlank()) {
+            message.setTo(requesterEmail);
+            message.setBcc(supportMailbox);
+        } else {
+            message.setTo(supportMailbox);
+        }
+
         mailSender.send(message);
-        log.info("Sent '{}' email to {}", message.getSubject(), to);
+        log.info("Sent '{}' email to {}", message.getSubject(), String.join(",", message.getTo()));
     }
 }
