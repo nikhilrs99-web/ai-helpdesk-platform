@@ -92,4 +92,33 @@ class AnalyticsControllerTest {
                         .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_customer"))))
                 .andExpect(status().isForbidden());
     }
+
+    @Test
+    void volumeReturnsZeroFilledDailySeriesOldestFirst() throws Exception {
+        com.helpdesk.analytics.domain.TicketMetric today = new com.helpdesk.analytics.domain.TicketMetric();
+        today.setCreatedAt(java.time.Instant.now());
+        com.helpdesk.analytics.domain.TicketMetric alsoToday = new com.helpdesk.analytics.domain.TicketMetric();
+        alsoToday.setCreatedAt(java.time.Instant.now());
+        when(repository.findByCreatedAtGreaterThanEqual(org.mockito.ArgumentMatchers.any()))
+                .thenReturn(java.util.List.of(today, alsoToday));
+
+        mockMvc.perform(get("/api/analytics/volume?days=3")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_agent"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(3))
+                .andExpect(jsonPath("$[0].count").value(0))
+                .andExpect(jsonPath("$[1].count").value(0))
+                .andExpect(jsonPath("$[2].count").value(2));
+    }
+
+    @Test
+    void volumeClampsAbsurdWindowSizes() throws Exception {
+        when(repository.findByCreatedAtGreaterThanEqual(org.mockito.ArgumentMatchers.any()))
+                .thenReturn(java.util.List.of());
+
+        mockMvc.perform(get("/api/analytics/volume?days=100000")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_agent"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(90));
+    }
 }

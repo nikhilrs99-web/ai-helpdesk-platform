@@ -8,6 +8,8 @@ import java.util.UUID;
 public interface TicketMetricRepository extends JpaRepository<TicketMetric, UUID> {
     TicketMetric findByTicketId(UUID ticketId);
 
+    java.util.List<TicketMetric> findByCreatedAtGreaterThanEqual(java.time.Instant since);
+
     @Query("SELECT COUNT(t) FROM TicketMetric t WHERE t.slaBreached = true")
     long countBreachedSlas();
 

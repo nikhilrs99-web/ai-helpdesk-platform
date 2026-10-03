@@ -68,4 +68,4 @@ A later audit found parts of the original build log were scaffolding rather than
 
 Also done since: ai-service gets its own pgvector Postgres in the Helm chart (`pgvector.enabled`), notification emails go to the actual requester (JWT `email` claim) with support in Bcc, Loki + Promtail ship container logs to Grafana (`docker compose up`, Grafana at http://localhost:3001), and the Helm chart (lint + render, with and without External Secrets) and Terraform (`validate`) were validated.
 
-Known remaining gaps: nothing has been applied to a live AWS account or Kubernetes cluster, `RagEvaluationTest` is still disabled (needs a live OpenAI key), and the removed ticket-volume chart / draft-acceptance tile still have no backend endpoint.
+Known remaining gaps: nothing has been applied to a live AWS account or Kubernetes cluster, `RagEvaluationTest` is still disabled (needs a live OpenAI key). The dashboard now has a real ticket-volume chart (`GET /api/analytics/volume`); the draft-acceptance tile stays removed because the platform has no AI drafting feature to measure.
