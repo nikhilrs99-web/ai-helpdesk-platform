@@ -115,3 +115,9 @@ export interface SlaStatusResponse {
   breached: boolean;
   minutesRemaining: number | null;
 }
+
+// Matches AnalyticsController.VolumePoint - tickets created per UTC day.
+export interface VolumePoint {
+  date: string;
+  count: number;
+}
