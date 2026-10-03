@@ -9,7 +9,7 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -23,7 +23,7 @@ class KnowledgeArticleRepositoryTest {
 
     @Container
     @ServiceConnection
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16")
+    static PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:16")
             // Testcontainers will pull standard postgres for simple integration tests,
             // later we can use pgvector/pgvector:pg16 if semantic search functions are needed in tests.
             .withDatabaseName("testdb")
