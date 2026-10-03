@@ -66,4 +66,6 @@ A later audit found parts of the original build log were scaffolding rather than
 - **analytics-service**: AI resolution rate is computed from real `ticket.updated` events (`aiResolved`).
 - **Infra**: HPA for every workload, External Secrets Operator + AWS Secrets Manager wiring (`secrets.tf`, `externalsecret.yaml`, opt-in via `secrets.external.enabled`), CI frontend build path fixed.
 
-Known remaining gaps: the Helm Postgres subchart lacks the pgvector extension (ai-service needs a custom image), email goes to one configured mailbox rather than per-user addresses, Loki/log aggregation is not deployed, and the new Terraform/Helm secrets wiring has not been applied to a live AWS account.
+Also done since: ai-service gets its own pgvector Postgres in the Helm chart (`pgvector.enabled`), notification emails go to the actual requester (JWT `email` claim) with support in Bcc, Loki + Promtail ship container logs to Grafana (`docker compose up`, Grafana at http://localhost:3001), and the Helm chart (lint + render, with and without External Secrets) and Terraform (`validate`) were validated.
+
+Known remaining gaps: nothing has been applied to a live AWS account or Kubernetes cluster, `RagEvaluationTest` is still disabled (needs a live OpenAI key), and the removed ticket-volume chart / draft-acceptance tile still have no backend endpoint.

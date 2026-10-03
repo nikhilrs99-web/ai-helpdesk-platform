@@ -145,6 +145,21 @@ analyticsService:
     maxReplicas: 3
     targetCPUUtilizationPercentage: 75
 
+pgvector:
+  # Dedicated Postgres with the pgvector extension for ai-service (the Bitnami image lacks it).
+  enabled: true
+  image:
+    repository: pgvector/pgvector
+    tag: pg16
+  storage: 5Gi
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
 smtp:
   # MailHog in docker-compose; use a real relay (SES, SendGrid, ...) in production.
   host: mailhog
@@ -167,15 +182,9 @@ secrets:
   openaiApiKey: "sk-your-openai-key-here"
 
 # Subchart configurations
-# KNOWN GAP: this is the stock Bitnami postgresql image, which does not include the
-# pgvector extension. ai-service's own Flyway migration (V1__init_vector_store.sql) runs
-# `CREATE EXTENSION vector` and will fail to start against this database - unlike
-# docker-compose, which uses the pgvector/pgvector:pg16 image specifically for this reason.
-# Fixing this needs a custom image (Bitnami postgresql base with pgvector compiled in, since
-# swapping to pgvector/pgvector directly breaks the chart's Bitnami-specific entrypoint
-# scripts) pushed to a registry this cluster can pull from - deliberately out of scope here.
-# Every other service (ticket, kb, notification, analytics, api-gateway, Keycloak) works
-# fine against this database.
+# The stock Bitnami postgresql image has no pgvector extension, which is why ai-service gets its
+# own pgvector Postgres (see pgvector: above and templates/pgvector.yaml); every other service
+# uses this database.
 postgresql:
   # Bitnami moved every pre-existing pinned/versioned tag off the free docker.io/bitnami
   # namespace in 2025 (only :latest stays free there, and not even that for every chart -

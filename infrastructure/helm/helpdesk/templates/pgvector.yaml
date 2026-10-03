@@ -1,0 +1,83 @@
+{{- if .Values.pgvector.enabled }}
+{{- /* ai-service's Flyway migration runs CREATE EXTENSION vector, which the stock Bitnami
+       postgresql subchart cannot do (no pgvector in the image). Rather than fight that chart's
+       entrypoint scripts, ai-service gets its own small pgvector/pgvector Postgres; every other
+       service keeps using the Bitnami one. The password is the same helpdesk-secrets value. */}}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-pgvector
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: {{ .Values.pgvector.storage }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-pgvector
+  labels:
+    app: {{ .Release.Name }}-pgvector
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-pgvector
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-pgvector
+    spec:
+      containers:
+        - name: pgvector
+          image: "{{ .Values.pgvector.image.repository }}:{{ .Values.pgvector.image.tag }}"
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: {{ .Values.postgresql.auth.database | quote }}
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: helpdesk-secrets
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: helpdesk-secrets
+                  key: POSTGRES_PASSWORD
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\""]
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\""]
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+{{ toYaml .Values.pgvector.resources | indent 12 }}
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-pgvector
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-pgvector
+spec:
+  selector:
+    app: {{ .Release.Name }}-pgvector
+  ports:
+    - port: 5432
+      targetPort: 5432
+{{- end }}

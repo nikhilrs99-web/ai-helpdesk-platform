@@ -27,6 +27,12 @@ spec:
                 name: helpdesk-config
             - secretRef:
                 name: helpdesk-secrets
+          {{- if and (eq $name "ai-service") $.Values.pgvector.enabled }}
+          # explicit env wins over envFrom: ai-service talks to the pgvector Postgres, not Bitnami's
+          env:
+            - name: POSTGRES_HOST
+              value: "{{ $.Release.Name }}-pgvector"
+          {{- end }}
           {{- if $svc.resources }}
           resources:
 {{ toYaml $svc.resources | indent 12 }}
