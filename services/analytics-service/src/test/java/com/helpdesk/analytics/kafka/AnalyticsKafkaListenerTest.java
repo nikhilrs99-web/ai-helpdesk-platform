@@ -103,7 +103,7 @@ class AnalyticsKafkaListenerTest {
     }
 
     @Test
-    void unrecognizedEventTypeStillPersistsAFoundOrCreatedMetric() {
+    void unrecognizedEventTypeIsIgnoredAndCreatesNoMetric() {
         TicketMetricRepository repository = mock(TicketMetricRepository.class);
         UUID ticketId = UUID.randomUUID();
         when(repository.findByTicketId(ticketId)).thenReturn(null);
@@ -114,31 +114,42 @@ class AnalyticsKafkaListenerTest {
                 """.formatted(ticketId);
         listener.handleEvent(payload);
 
-        verify(repository, times(1)).save(any(TicketMetric.class));
+        verify(repository, never()).save(any(TicketMetric.class));
     }
 
     @Test
-    void malformedJsonIsSwallowedAndNeverReachesTheRepository() {
+    void malformedJsonPropagatesSoTheErrorHandlerCanRetryAndDeadLetterIt() {
         TicketMetricRepository repository = mock(TicketMetricRepository.class);
         AnalyticsKafkaListener listener = new AnalyticsKafkaListener(repository, objectMapper);
 
-        // A @KafkaListener method throwing sends the message to the DefaultErrorHandler /
-        // dead-letter topic (see KafkaConfig) instead of just logging it - handleEvent's
-        // try/catch means garbage payloads are deliberately logged and dropped instead.
-        listener.handleEvent("not json at all {{{");
+        // Must throw: KafkaConfig's DefaultErrorHandler retries and then dead-letters whatever
+        // escapes the listener. Swallowing it (the old behaviour) lost the event silently.
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> listener.handleEvent("not json at all {{{"))
+                .isInstanceOf(RuntimeException.class);
 
         verify(repository, never()).save(any());
     }
 
     @Test
-    void nonUuidTicketIdIsSwallowedAndNeverReachesTheRepository() {
+    void nonUuidTicketIdPropagatesAndNeverReachesTheRepository() {
         TicketMetricRepository repository = mock(TicketMetricRepository.class);
         AnalyticsKafkaListener listener = new AnalyticsKafkaListener(repository, objectMapper);
 
-        String payload = """
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> listener.handleEvent("""
                 {"eventType": "ticket.created", "ticketId": "not-a-uuid"}
-                """;
-        listener.handleEvent(payload);
+                """)).isInstanceOf(IllegalArgumentException.class);
+
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void eventTypesAnalyticsDoesNotUseAreIgnoredWithoutError() {
+        TicketMetricRepository repository = mock(TicketMetricRepository.class);
+        AnalyticsKafkaListener listener = new AnalyticsKafkaListener(repository, objectMapper);
+
+        listener.handleEvent("""
+                {"eventType": "escalation.approved", "ticketId": "%s"}
+                """.formatted(UUID.randomUUID()));
 
         verify(repository, never()).save(any());
     }

@@ -22,7 +22,7 @@ spring:
             - id: ticket-service
               uri: http://ticket-service:8081
               predicates:
-                - Path=/api/tickets/**
+                - Path=/api/tickets/**,/api/agents/**
             - id: kb-service
               uri: http://kb-service:8082
               predicates:

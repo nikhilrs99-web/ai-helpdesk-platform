@@ -69,3 +69,14 @@ A later audit found parts of the original build log were scaffolding rather than
 Also done since: ai-service gets its own pgvector Postgres in the Helm chart (`pgvector.enabled`), notification emails go to the actual requester (JWT `email` claim) with support in Bcc, Loki + Promtail ship container logs to Grafana (`docker compose up`, Grafana at http://localhost:3001), and the Helm chart (lint + render, with and without External Secrets) and Terraform (`validate`) were validated.
 
 Known remaining gaps: nothing has been applied to a live AWS account or Kubernetes cluster, `RagEvaluationTest` is still disabled (needs a live OpenAI key). The dashboard now has a real ticket-volume chart (`GET /api/analytics/volume`); the draft-acceptance tile stays removed because the platform has no AI drafting feature to measure.
+
+## Testing
+
+| What | How |
+|---|---|
+| Backend unit + integration (real Postgres/Redis/Kafka via Testcontainers) | `mvn verify` (needs Docker; on a machine with a non-UTC legacy timezone name set `JAVA_TOOL_OPTIONS=-Duser.timezone=UTC`) |
+| Frontend | `cd frontend && npm test` |
+| End-to-end smoke (real stack: login -> ticket -> email -> escalation -> AI-resolve -> analytics) | `docker compose up -d --build` then `node scripts/e2e/smoke.mjs`; also runnable from GitHub Actions ("End-to-end smoke test", manual + nightly) |
+| Docker images | CI builds every image on pull requests (`docker-build-check`) |
+
+API reference: [docs/api/endpoints.md](docs/api/endpoints.md). The stack needs about 6 GB of free RAM; on smaller machines start only the core services listed in `.github/workflows/e2e.yml`.

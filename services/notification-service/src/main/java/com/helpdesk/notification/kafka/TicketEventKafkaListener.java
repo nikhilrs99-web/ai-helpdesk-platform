@@ -13,8 +13,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 public class TicketEventKafkaListener {
@@ -23,8 +21,7 @@ public class TicketEventKafkaListener {
 
     private final NotificationDispatcher dispatcher;
     private final ObjectMapper objectMapper;
-    // In-memory idempotency check (for temporary use before Redis/DB deduplication)
-    private final Set<String> processedEvents = ConcurrentHashMap.newKeySet();
+    private final EventDeduplicator deduplicator;
 
     // Every event's own eventType field is what actually routes it - reading this first,
     // separately from the concrete type, is what makes the switch below possible instead of
@@ -32,9 +29,11 @@ public class TicketEventKafkaListener {
     @JsonIgnoreProperties(ignoreUnknown = true)
     private record EventEnvelope(String eventType) {}
 
-    public TicketEventKafkaListener(NotificationDispatcher dispatcher, ObjectMapper objectMapper) {
+    public TicketEventKafkaListener(NotificationDispatcher dispatcher, ObjectMapper objectMapper,
+                                    EventDeduplicator deduplicator) {
         this.dispatcher = dispatcher;
         this.objectMapper = objectMapper;
+        this.deduplicator = deduplicator;
     }
 
     // No longer catches-and-swallows every exception: a deserialization failure or a
@@ -61,7 +60,7 @@ public class TicketEventKafkaListener {
         }
 
         String eventId = event.eventId().toString();
-        if (processedEvents.add(eventId)) {
+        if (deduplicator.firstTime(eventId)) {
             log.info("Received {} event from Kafka: {}", eventType, eventId);
             dispatcher.dispatch(event);
         } else {

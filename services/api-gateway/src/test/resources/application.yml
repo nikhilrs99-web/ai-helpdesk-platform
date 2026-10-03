@@ -24,7 +24,7 @@ spring:
               # stub JDK HttpServer bound to this exact port before the Spring context loads.
               uri: http://localhost:18089
               predicates:
-                - Path=/api/tickets/**
+                - Path=/api/tickets/**,/api/agents/**
 management:
   endpoints:
     web:

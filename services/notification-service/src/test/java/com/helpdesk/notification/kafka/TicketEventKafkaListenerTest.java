@@ -29,6 +29,17 @@ class TicketEventKafkaListenerTest {
 
     private final ObjectMapper objectMapper = tools.jackson.databind.json.JsonMapper.builder().build();
 
+    // Stand-in for the Redis-backed deduplicator with the same first-time/duplicate semantics.
+    private EventDeduplicator inMemoryDeduplicator() {
+        java.util.Set<String> seen = new java.util.HashSet<>();
+        return new EventDeduplicator(null) {
+            @Override
+            public boolean firstTime(String eventId) {
+                return seen.add(eventId);
+            }
+        };
+    }
+
     private String ticketCreatedPayload(UUID eventId, UUID ticketId) throws Exception {
         TicketCreatedEvent event = new TicketCreatedEvent(
                 eventId, TicketCreatedEvent.CURRENT_VERSION, Instant.now(), ticketId,
@@ -53,7 +64,7 @@ class TicketEventKafkaListenerTest {
     @Test
     void ticketCreatedEventIsDispatchedExactlyOnce() throws Exception {
         NotificationDispatcher dispatcher = mock(NotificationDispatcher.class);
-        TicketEventKafkaListener listener = new TicketEventKafkaListener(dispatcher, objectMapper);
+        TicketEventKafkaListener listener = new TicketEventKafkaListener(dispatcher, objectMapper, inMemoryDeduplicator());
         String payload = ticketCreatedPayload(UUID.randomUUID(), UUID.randomUUID());
 
         listener.handleTicketEvent(payload);
@@ -64,7 +75,7 @@ class TicketEventKafkaListenerTest {
     @Test
     void redeliveredEventWithSameIdIsNotDispatchedTwice() throws Exception {
         NotificationDispatcher dispatcher = mock(NotificationDispatcher.class);
-        TicketEventKafkaListener listener = new TicketEventKafkaListener(dispatcher, objectMapper);
+        TicketEventKafkaListener listener = new TicketEventKafkaListener(dispatcher, objectMapper, inMemoryDeduplicator());
         UUID eventId = UUID.randomUUID();
         String payload = ticketCreatedPayload(eventId, UUID.randomUUID());
 
@@ -79,7 +90,7 @@ class TicketEventKafkaListenerTest {
     @Test
     void slaBreachedEventIsDispatched() throws Exception {
         NotificationDispatcher dispatcher = mock(NotificationDispatcher.class);
-        TicketEventKafkaListener listener = new TicketEventKafkaListener(dispatcher, objectMapper);
+        TicketEventKafkaListener listener = new TicketEventKafkaListener(dispatcher, objectMapper, inMemoryDeduplicator());
         String payload = slaBreachedPayload(UUID.randomUUID(), UUID.randomUUID());
 
         listener.handleTicketEvent(payload);
@@ -90,7 +101,7 @@ class TicketEventKafkaListenerTest {
     @Test
     void escalationApprovedEventIsDispatched() throws Exception {
         NotificationDispatcher dispatcher = mock(NotificationDispatcher.class);
-        TicketEventKafkaListener listener = new TicketEventKafkaListener(dispatcher, objectMapper);
+        TicketEventKafkaListener listener = new TicketEventKafkaListener(dispatcher, objectMapper, inMemoryDeduplicator());
         String payload = escalationApprovedPayload(UUID.randomUUID(), UUID.randomUUID());
 
         listener.handleTicketEvent(payload);
@@ -101,7 +112,7 @@ class TicketEventKafkaListenerTest {
     @Test
     void unsupportedEventTypeIsIgnored() throws Exception {
         NotificationDispatcher dispatcher = mock(NotificationDispatcher.class);
-        TicketEventKafkaListener listener = new TicketEventKafkaListener(dispatcher, objectMapper);
+        TicketEventKafkaListener listener = new TicketEventKafkaListener(dispatcher, objectMapper, inMemoryDeduplicator());
 
         // A real, well-formed event but of a type this consumer doesn't know about yet -
         // forward-compatible per docs/kafka/event-schema.md's versioning policy, not an error.
@@ -113,7 +124,7 @@ class TicketEventKafkaListenerTest {
     @Test
     void malformedPayloadPropagatesInsteadOfBeingSwallowed() {
         NotificationDispatcher dispatcher = mock(NotificationDispatcher.class);
-        TicketEventKafkaListener listener = new TicketEventKafkaListener(dispatcher, objectMapper);
+        TicketEventKafkaListener listener = new TicketEventKafkaListener(dispatcher, objectMapper, inMemoryDeduplicator());
 
         // Previously this was caught and logged, so KafkaConfig's DefaultErrorHandler +
         // DeadLetterPublishingRecoverer never got a chance to run. Now it has to propagate for

@@ -1,0 +1,56 @@
+name: End-to-end smoke test
+
+# Manual (and nightly) because it builds and boots the whole docker-compose stack (~10+ minutes).
+# Runs scripts/e2e/smoke.mjs: Keycloak login -> ticket -> email -> escalation gate -> AI-resolve -> analytics.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 2 * * *"
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Create throwaway local .env
+        run: |
+          cat > .env <<'EOF'
+          POSTGRES_DB=helpdesk
+          POSTGRES_USER=postgres
+          POSTGRES_PASSWORD=ci_only_password
+          KEYCLOAK_ADMIN=admin
+          KEYCLOAK_ADMIN_PASSWORD=ci_only_admin_password
+          OPENAI_API_KEY=sk-not-used-by-the-smoke-test
+          EOF
+
+      - name: Start the stack
+        run: docker compose up -d --build postgres redis kafka keycloak mailhog ticket-service notification-service analytics-service api-gateway
+
+      - name: Wait for the gateway and Keycloak
+        run: |
+          for i in $(seq 1 90); do
+            kc=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/realms/helpdesk || true)
+            gw=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/api/tickets || true)
+            [ "$kc" = "200" ] && [ "$gw" = "401" ] && exit 0
+            sleep 10
+          done
+          echo "stack did not become ready" && docker compose ps && exit 1
+
+      - name: Run the smoke test
+        run: node scripts/e2e/smoke.mjs
+
+      - name: Show service logs on failure
+        if: failure()
+        run: docker compose logs --tail 80 ticket-service notification-service analytics-service api-gateway
+
+      - name: Stop the stack
+        if: always()
+        run: docker compose down -v
