@@ -10,7 +10,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "keycloak-js": "^25.0.6",
+    "keycloak-js": "^26.2.4",
     "lucide-react": "^1.49.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
