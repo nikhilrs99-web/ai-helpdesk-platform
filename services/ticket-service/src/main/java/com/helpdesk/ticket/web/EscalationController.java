@@ -88,7 +88,8 @@ public class EscalationController {
         // is what actually gets it to Kafka.
         EscalationApprovedEvent event = new EscalationApprovedEvent(
                 UUID.randomUUID(), EscalationApprovedEvent.CURRENT_VERSION, Instant.now(),
-                ticketId, saved.getId(), saved.getReason(), saved.getDecidedBy());
+                ticketId, saved.getId(), saved.getReason(), saved.getDecidedBy(),
+                ticketRepository.findById(ticketId).map(com.helpdesk.ticket.domain.Ticket::getRequesterEmail).orElse(null));
         try {
             String payload = objectMapper.writeValueAsString(event);
             outboxRepository.save(new OutboxEvent(

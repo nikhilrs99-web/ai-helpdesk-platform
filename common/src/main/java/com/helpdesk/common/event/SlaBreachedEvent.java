@@ -21,8 +21,14 @@ public record SlaBreachedEvent(
         Instant occurredAt,
         UUID ticketId,
         String slaType,
-        Instant breachedAt
+        Instant breachedAt,
+        String requesterEmail
 ) implements DomainEvent {
+
+    public SlaBreachedEvent(UUID eventId, int version, Instant occurredAt, UUID ticketId,
+                            String slaType, Instant breachedAt) {
+        this(eventId, version, occurredAt, ticketId, slaType, breachedAt, null);
+    }
 
     public static final int CURRENT_VERSION = 1;
     public static final String EVENT_TYPE = "sla.breached";

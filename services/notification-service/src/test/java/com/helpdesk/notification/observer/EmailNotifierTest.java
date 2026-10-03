@@ -83,4 +83,38 @@ class EmailNotifierTest {
         notifier.notify(other);
         verify(mailSender, never()).send(org.mockito.ArgumentMatchers.any(SimpleMailMessage.class));
     }
+
+    @Test
+    void ticketCreatedWithRequesterEmailGoesToRequesterWithSupportInBcc() {
+        TicketCreatedEvent event = new TicketCreatedEvent(UUID.randomUUID(),
+                TicketCreatedEvent.CURRENT_VERSION, Instant.now(), UUID.randomUUID(),
+                TicketCategory.ACCESS, "requester-1", "alice@example.com");
+
+        notifier.notify(event);
+
+        SimpleMailMessage msg = sentMessage();
+        assertThat(msg.getTo()).containsExactly("alice@example.com");
+        assertThat(msg.getBcc()).containsExactly("support@helpdesk.local");
+    }
+
+    @Test
+    void slaBreachIsInternalEvenWhenRequesterEmailIsKnown() {
+        SlaBreachedEvent event = new SlaBreachedEvent(UUID.randomUUID(), SlaBreachedEvent.CURRENT_VERSION,
+                Instant.now(), UUID.randomUUID(), "FIRST_RESPONSE", Instant.now(), "alice@example.com");
+
+        notifier.notify(event);
+
+        assertThat(sentMessage().getTo()).containsExactly("support@helpdesk.local");
+    }
+
+    @Test
+    void escalationApprovedReachesTheRequester() {
+        EscalationApprovedEvent event = new EscalationApprovedEvent(UUID.randomUUID(),
+                EscalationApprovedEvent.CURRENT_VERSION, Instant.now(), UUID.randomUUID(),
+                UUID.randomUUID(), "Upset customer", "agent-1", "alice@example.com");
+
+        notifier.notify(event);
+
+        assertThat(sentMessage().getTo()).containsExactly("alice@example.com");
+    }
 }

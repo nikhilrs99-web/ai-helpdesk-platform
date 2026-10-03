@@ -14,3 +14,6 @@ Spring Boot Actuator exposes Micrometer metrics (including JVM stats, HTTP laten
 
 ## 3. Dashboards (Grafana)
 Grafana sits at `http://localhost:3001` and connects to both Prometheus and Tempo. Trace-to-log correlation is enabled, allowing developers to jump directly from a spike in the latency graph (Prometheus), into the exact request waterfall (Tempo), down into the contextual error logs.
+
+## Logs (Loki)
+`docker compose up` also starts Loki (port 3100) and Promtail. Promtail discovers every compose container through the Docker socket and ships stdout/stderr to Loki, labelled `service` (compose service name) and `container`. In Grafana (http://localhost:3001) the **Loki** datasource is provisioned, and the Tempo datasource links traces to logs. Example query: `{service="ticket-service"} |= "ERROR"`. Kubernetes log shipping (Promtail/Alloy DaemonSet) is not part of the Helm chart yet.
