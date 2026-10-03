@@ -9,3 +9,12 @@ datasources:
     type: tempo
     url: http://tempo:3200
     access: proxy
+    jsonData:
+      tracesToLogsV2:
+        datasourceUid: loki
+        filterByTraceID: false
+  - name: Loki
+    type: loki
+    uid: loki
+    url: http://loki:3100
+    access: proxy

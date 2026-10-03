@@ -219,6 +219,24 @@ services:
     ports:
       - "9090:9090"
 
+  loki:
+    image: grafana/loki:3.2.1
+    command: -config.file=/etc/loki/loki.yaml
+    volumes:
+      - ./infrastructure/docker/loki/loki.yaml:/etc/loki/loki.yaml:ro
+      - loki-data:/loki
+    ports:
+      - "3100:3100"
+
+  promtail:
+    image: grafana/promtail:3.2.1
+    command: -config.file=/etc/promtail/promtail.yaml
+    volumes:
+      - ./infrastructure/docker/promtail/promtail.yaml:/etc/promtail/promtail.yaml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - loki
+
   grafana:
     image: grafana/grafana:latest
     container_name: helpdesk-grafana
@@ -227,8 +245,11 @@ services:
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
     volumes:
       - ./infrastructure/docker/grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      - loki
     ports:
       - "3001:3000"
 
 volumes:
   postgres-data:
+  loki-data:
