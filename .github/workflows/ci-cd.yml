@@ -96,7 +96,7 @@ jobs:
           - { service: frontend, context: ./frontend, dockerfile: frontend/Dockerfile }
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Build ${{ matrix.service }} image
         run: docker build -f ${{ matrix.dockerfile }} -t helpdesk/${{ matrix.service }}:pr-check ${{ matrix.context }}
