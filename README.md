@@ -3,7 +3,52 @@
 A RAG-based support desk built as event-driven microservices — a portfolio project demonstrating Spring Boot, Kafka, Redis, Spring AI, Kubernetes, and AWS end to end. AI is a feature inside a strong backend system, not the whole project: ticket classification, retrieval-augmented draft replies, and an agentic tool-calling assistant sit on top of a properly modeled ticket lifecycle, transactional-outbox event publishing, and full observability.
 
 ## Status
-Fully Completed (v1.0.0-RELEASE) — The 100-Day Build Plan was successfully executed in full. See the Build Log below for the phase-by-phase breakdown.
+Complete and running end to end: ticket lifecycle with human-approved escalations, event-driven email notifications, a knowledge base with hybrid (vector + full-text) search, an AI assistant, and an analytics dashboard. See the [Build Log](#build-log) for the phase-by-phase history and [Post-release hardening](#post-release-hardening-v100-follow-ups) for what was fixed or added afterwards.
+
+## Screenshots
+All screenshots are real, taken from the running application with seeded demo data (regenerate them with `scripts/screenshots`).
+
+### Sign-in (Keycloak)
+Every page sits behind Keycloak single sign-on; roles (`customer`, `agent`, `admin`) decide what each user can see and do.
+
+![Keycloak sign-in](docs/images/login.png)
+
+### Analytics dashboard (agents)
+Ticket volume per day, SLA compliance and the share of tickets the AI resolved on its own. The green dot shows the agent is online and receiving routed tickets.
+
+![Analytics dashboard](docs/images/dashboard.png)
+
+### Support tickets
+Tickets are routed to a team by category and move through a state machine (open, triaged, assigned, in progress, resolved, closed).
+
+![Support tickets list](docs/images/tickets.png)
+
+### Ticket detail: SLA and human-approved escalation
+Shows the first-response SLA countdown, status controls for agents, and the escalation workflow. An escalation requested by the customer (or the AI assistant) has no effect until an agent approves it.
+
+![Ticket detail with SLA and escalation](docs/images/ticket-detail.png)
+
+### Creating a ticket
+The form asks for the extra details each category needs (for example browser and app version for a bug).
+
+![New ticket form](docs/images/new-ticket.png)
+
+### Knowledge base search
+Full-text search over help articles.
+
+![Knowledge base search](docs/images/knowledge-base.png)
+
+### What a customer sees
+Customers only see their own tickets, with no agent controls.
+
+![Customer view](docs/images/customer-tickets.png)
+
+### Email notifications
+Customers get an email when a ticket is created and when an escalation is approved (shown in MailHog, the local mail catcher at http://localhost:8025).
+
+![Email notifications in MailHog](docs/images/emails.png)
+
+> The AI assistant page (chat with a tool-calling agent that can look up tickets, check SLAs, search the knowledge base and request escalations) needs an OpenAI API key, so it is not shown here.
 
 ## Repository layout
 ```
@@ -22,15 +67,72 @@ docs/
 ## Running locally
 ```
 cp .env.example .env      # fill in local values (never commit .env)
-docker compose up -d      # starts PostgreSQL (pgvector) and Keycloak
+docker compose up -d --build
 ```
-See [docs/architecture/keycloak-setup.md](docs/architecture/keycloak-setup.md) for the realm/roles/test-user setup and how to get a local test token.
+The full stack is 16 containers and needs roughly 6 GB of free RAM. On a smaller machine start only the core services:
+```
+docker compose up -d --build postgres redis kafka keycloak mailhog ticket-service kb-service notification-service analytics-service api-gateway
+cd frontend && npm install && npm run dev      # http://localhost:5173
+```
+Sign in with one of the seeded test users (`test-agent`, `test-customer`, `test-customer-2`; credentials are in `infrastructure/docker/keycloak/realm-export/helpdesk-realm.json`). See [docs/architecture/keycloak-setup.md](docs/architecture/keycloak-setup.md) for the realm, roles and how to get a token for API calls.
 
 ## Architecture
-Diagram added once the core services are online.
+```mermaid
+flowchart LR
+    user([Customer / Agent]) --> web[React SPA]
+    web -->|OIDC login| kc[Keycloak]
+    web -->|JWT| gw[API Gateway]
+    gw --> ticket[ticket-service]
+    gw --> kb[kb-service]
+    gw --> ai[ai-service]
+    gw --> analytics[analytics-service]
+
+    ticket --> pg[(PostgreSQL)]
+    ticket --> redis[(Redis)]
+    ticket -->|transactional outbox| kafka{{Kafka<br/>ticket-events}}
+    kb --> pg
+    kb --> redis
+    ai --> pgv[(PostgreSQL + pgvector)]
+    ai -->|caller's own token| ticket
+    ai -->|caller's own token| kb
+    ai --> llm[[LLM provider]]
+
+    kafka --> notif[notification-service]
+    kafka --> analytics
+    notif --> mail[/SMTP/]
+    notif --> redis
+    analytics --> pg
+```
+
+Key ideas:
+- **Transactional outbox:** ticket-service writes events to its own database in the same transaction as the change, and a worker publishes them to Kafka only after the broker acknowledges them, so no event is lost or invented.
+- **Human in the loop:** the AI assistant can only *request* an escalation. It acts with the caller's own token (so it can never see more than the user could), and nothing happens until an agent approves.
+- **Failure handling:** consumers retry, then dead-letter bad messages; notification de-duplication lives in Redis; LLM calls sit behind a circuit breaker.
+- **Observability:** OpenTelemetry traces to Tempo, metrics to Prometheus, logs to Loki, all in Grafana.
+
+### Ticket creation to email
+```mermaid
+sequenceDiagram
+    actor C as Customer
+    participant G as API Gateway
+    participant T as ticket-service
+    participant K as Kafka
+    participant N as notification-service
+    participant A as analytics-service
+    C->>G: POST /api/tickets (JWT)
+    G->>T: forward
+    T->>T: save ticket + outbox event (one transaction)
+    T-->>C: 201 Created
+    T->>K: outbox worker publishes ticket.created (after broker ack)
+    K->>N: ticket.created
+    N->>N: skip if already processed (Redis)
+    N-->>C: email to the requester
+    K->>A: ticket.created
+    A->>A: update dashboard metrics
+```
 
 ## Tech Stack
-Java 21 &middot; Spring Boot 3 &middot; Spring Security &middot; Spring Data JPA &middot; Flyway &middot; Spring Cloud &middot; Spring AI &middot; PostgreSQL (+pgvector, full-text search) &middot; Redis &middot; Kafka &middot; Keycloak &middot; Docker &middot; Kubernetes &middot; Helm &middot; Argo CD &middot; Terraform &middot; AWS (EKS, RDS, S3, ElastiCache) &middot; Prometheus &middot; Grafana &middot; OpenTelemetry &middot; React &middot; TypeScript
+Java 21 &middot; Spring Boot 4 &middot; Spring Security &middot; Spring Data JPA &middot; Flyway &middot; Spring Cloud &middot; Spring AI &middot; PostgreSQL (+pgvector, full-text search) &middot; Redis &middot; Kafka &middot; Keycloak &middot; Docker &middot; Kubernetes &middot; Helm &middot; Argo CD &middot; Terraform &middot; AWS (EKS, RDS, S3, ElastiCache) &middot; Prometheus &middot; Grafana &middot; OpenTelemetry &middot; React 19 &middot; TypeScript &middot; Tailwind CSS &middot; Loki
 
 See [docs/decisions](docs/decisions) for the reasoning behind key choices, including why PostgreSQL replaces a separate MongoDB store.
 

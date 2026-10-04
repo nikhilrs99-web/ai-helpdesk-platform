@@ -1,0 +1,8 @@
+{
+  "name": "helpdesk-screenshots",
+  "private": true,
+  "type": "module",
+  "description": "Regenerates the README screenshots from a running local stack (npm run capture)",
+  "scripts": { "capture": "node capture.mjs" },
+  "devDependencies": { "playwright": "^1.50.0" }
+}
